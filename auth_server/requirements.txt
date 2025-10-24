@@ -1,16 +1,16 @@
 # CAILculator Auth Server Dependencies
 
 # Web framework
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
 
 # Database
-sqlalchemy==2.0.25
-psycopg2-binary==2.9.9
+sqlalchemy>=2.0.36
+psycopg2-binary>=2.9.10
 
-# Validation
-pydantic[email]==2.5.3
-python-dotenv==1.0.0
+# Validation (Python 3.13 compatible)
+pydantic[email]>=2.10.0
+python-dotenv>=1.0.0
 
 # CORS
-python-multipart==0.0.6
+python-multipart>=0.0.6

@@ -88,3 +88,4 @@ API docs at: http://localhost:8000/docs
 - **Indie**: $49/month - 15,000 requests
 - **Team**: $250/month - 100,000 requests
 - **Enterprise**: Custom pricing (starting at $3,000/month) - Unlimited
+

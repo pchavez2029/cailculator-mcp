@@ -1,0 +1,6 @@
+{
+  "enabledMcpjsonServers": [
+    "cailculator-mcp"
+  ],
+  "enableAllProjectMcpServers": true
+}

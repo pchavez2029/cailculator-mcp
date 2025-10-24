@@ -1,0 +1,91 @@
+{
+  "theme": {
+    "name": "chavez_labs",
+    "description": "Default theme for Chavez Transform visualizations",
+    "colors": {
+      "primary": "#8B5CF6",
+      "secondary": "#EC4899",
+      "accent": "#3B82F6",
+      "e8": "#F59E0B",
+      "canonical": "#10B981",
+      "background": "#FFFFFF",
+      "grid": "#E5E7EB"
+    },
+    "fonts": {
+      "family": "Inter, system-ui, sans-serif",
+      "title_size": 14,
+      "label_size": 12,
+      "tick_size": 10
+    },
+    "dimensions": {
+      "default_width": 800,
+      "default_height": 600,
+      "dpi": 150,
+      "comprehensive_width": 1500,
+      "comprehensive_height": 1000
+    }
+  },
+  "plot_types": {
+    "canonical_six": {
+      "title": "Canonical Six Pattern Universality",
+      "x_label": "Pattern ID",
+      "y_label": "C[f] value",
+      "show_mean_line": true,
+      "bar_color": "primary",
+      "mean_line_color": "red",
+      "mean_line_style": "dashed"
+    },
+    "alpha_sensitivity": {
+      "title": "Chavez Transform vs Alpha Parameter",
+      "x_label": "Alpha (convergence parameter)",
+      "y_label": "|C[f]| (Transform magnitude)",
+      "x_scale": "log",
+      "line_color": "accent",
+      "show_optimal_marker": true
+    },
+    "dimensional_weighting": {
+      "title": "Effect of Dimensional Weighting",
+      "x_label": "Dimension parameter d",
+      "y_label": "C[f] value",
+      "line_color": "secondary",
+      "marker_size": 8
+    },
+    "e8_comparison": {
+      "title": "E8 vs Canonical Loci Comparison",
+      "x_label": "Pattern ID",
+      "y_label": "C[f] value",
+      "bar_mode": "group",
+      "canonical_color": "canonical",
+      "e8_color": "e8"
+    },
+    "kernel_localization": {
+      "title": "Zero Divisor Kernel Localization",
+      "x_label": "Position x",
+      "y_label": "Kernel K_Z(P, x)",
+      "fill_under_curve": true,
+      "fill_alpha": 0.3,
+      "line_color": "primary"
+    }
+  },
+  "export_formats": {
+    "free_tier": ["png", "svg"],
+    "premium_tier": ["png", "svg", "html", "pdf"],
+    "default_format": "png"
+  },
+  "interactive_features": {
+    "free_tier": {
+      "hover": false,
+      "zoom": false,
+      "pan": false,
+      "download": false
+    },
+    "premium_tier": {
+      "hover": true,
+      "zoom": true,
+      "pan": true,
+      "download": true,
+      "crosshair": true,
+      "annotations": true
+    }
+  }
+}

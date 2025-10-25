@@ -3,13 +3,16 @@ CAILculator Auth Server - FastAPI Backend for Railway
 Handles API key validation and usage tracking
 """
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 import os
 from datetime import datetime
 from sqlalchemy.orm import Session
+from pathlib import Path
 
 from database import (
     get_db,
@@ -25,6 +28,10 @@ app = FastAPI(
     description="Authentication and usage tracking for CAILculator MCP",
     version="1.0.0"
 )
+
+# Templates directory
+BASE_DIR = Path(__file__).resolve().parent
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # CORS middleware
 app.add_middleware(
@@ -115,9 +122,14 @@ def check_rate_limit(api_key: str, db: Session) -> tuple[bool, int, int]:
 # API ENDPOINTS
 # =============================================================================
 
-@app.get("/")
-async def root():
-    """Health check endpoint"""
+@app.get("/", response_class=HTMLResponse)
+async def landing_page(request: Request):
+    """Landing page with pricing"""
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/api")
+async def api_info():
+    """API info endpoint"""
     return {
         "service": "CAILculator Auth Server",
         "status": "operational",

@@ -5,7 +5,7 @@ Handles API key validation and usage tracking
 
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr
 from typing import Optional
@@ -13,6 +13,9 @@ import os
 from datetime import datetime
 from sqlalchemy.orm import Session
 from pathlib import Path
+import stripe
+import secrets
+import hashlib
 
 from database import (
     get_db,
@@ -32,6 +35,17 @@ app = FastAPI(
 # Templates directory
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+# Stripe configuration
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+
+# Stripe Price IDs
+STRIPE_PRICES = {
+    "student": "price_1SLxZ4Rum9Df5I8USTanHMvF",
+    "teacher": "price_1SLxgTRum9Df5I8Uei1Zhszt",
+    "indie": "price_1SLxi7Rum9Df5I8Ub67jWs3T",
+    "team": "price_1SLxjnRum9Df5I8UujSBt0EW"
+}
 
 # CORS middleware
 app.add_middleware(
@@ -318,6 +332,116 @@ async def startup():
 async def shutdown():
     """Cleanup on shutdown"""
     print("Shutting down CAILculator Auth Server...")
+
+# =============================================================================
+# STRIPE CHECKOUT
+# =============================================================================
+
+@app.get("/create-checkout-session")
+async def create_checkout_session(tier: str):
+    """
+    Create Stripe checkout session for subscription
+    """
+    if tier not in STRIPE_PRICES:
+        raise HTTPException(status_code=400, detail="Invalid subscription tier")
+
+    try:
+        # Get the base URL (Railway sets this automatically)
+        base_url = os.getenv("RAILWAY_PUBLIC_DOMAIN", "localhost:8000")
+        if not base_url.startswith("http"):
+            base_url = f"https://{base_url}"
+
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price': STRIPE_PRICES[tier],
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=f"{base_url}/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{base_url}/?canceled=true",
+            metadata={
+                'tier': tier
+            }
+        )
+
+        return RedirectResponse(url=checkout_session.url, status_code=303)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/success")
+async def success(request: Request, session_id: str):
+    """
+    Success page after checkout
+    """
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+
+        return templates.TemplateResponse("success.html", {
+            "request": request,
+            "session": session
+        })
+    except Exception as e:
+        return templates.TemplateResponse("success.html", {
+            "request": request,
+            "error": str(e)
+        })
+
+@app.post("/webhook/stripe")
+async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    """
+    Handle Stripe webhooks for subscription events
+    """
+    payload = await request.body()
+    sig_header = request.headers.get('stripe-signature')
+
+    # For now, just log the event (we'll add webhook secret later)
+    try:
+        event = stripe.Event.construct_from(
+            stripe.util.json.loads(payload), stripe.api_key
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Handle successful subscription creation
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+
+        # Get customer email and tier from session
+        customer_email = session.get('customer_email') or session.get('customer_details', {}).get('email')
+        tier = session.get('metadata', {}).get('tier', 'student')
+
+        if customer_email:
+            # Check if user already exists
+            existing_user = db.query(User).filter(User.email == customer_email).first()
+
+            if not existing_user:
+                # Create user
+                user = User(
+                    email=customer_email,
+                    name=customer_email.split('@')[0],
+                    tier=SubscriptionTier(tier)
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+
+                # Generate API key
+                api_key_plain = f"cail_{secrets.token_urlsafe(32)}"
+                api_key_hash = hashlib.sha256(api_key_plain.encode()).hexdigest()
+
+                api_key_record = APIKey(
+                    user_id=user.id,
+                    key_hash=api_key_hash
+                )
+                db.add(api_key_record)
+                db.commit()
+
+                # TODO: Send email with API key
+                print(f"Created user {customer_email} with API key: {api_key_plain}")
+
+    return {"status": "success"}
 
 if __name__ == "__main__":
     import uvicorn

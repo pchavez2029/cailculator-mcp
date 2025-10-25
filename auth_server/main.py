@@ -398,8 +398,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 
     # For now, just log the event (we'll add webhook secret later)
     try:
+        import json
         event = stripe.Event.construct_from(
-            stripe.util.json.loads(payload), stripe.api_key
+            json.loads(payload.decode('utf-8')), stripe.api_key
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

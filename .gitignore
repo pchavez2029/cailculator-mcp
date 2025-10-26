@@ -65,3 +65,6 @@ build/
 !assets/**/*.png
 !assets/**/*.jpg
 !assets/**/*.svg
+!auth_server/static/**/*.png
+!auth_server/static/**/*.jpg
+!auth_server/static/**/*.svg

@@ -31,10 +31,10 @@ Base = declarative_base()
 # =============================================================================
 
 class SubscriptionTier(str, Enum):
-    STUDENT = "student"
-    TEACHER = "teacher"
+    FREE = "free"
     INDIE = "indie"
-    TEAM = "team"
+    ACADEMIC = "academic"
+    PROFESSIONAL = "professional"
     ENTERPRISE = "enterprise"
 
 # =============================================================================
@@ -47,8 +47,18 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=True)
-    tier = Column(SQLEnum(SubscriptionTier), default=SubscriptionTier.STUDENT, nullable=False)
+    tier = Column(SQLEnum(SubscriptionTier), default=SubscriptionTier.FREE, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Email verification
+    email_verified = Column(Integer, default=0, nullable=False)  # 0=pending, 1=verified
+    verification_token = Column(String, nullable=True, index=True)
+    verification_token_expires = Column(DateTime, nullable=True)
+
+    # Geographic and security
+    country_code = Column(String(2), nullable=True)  # ISO 2-letter country code
+    signup_ip = Column(String, nullable=True)
+    requires_manual_approval = Column(Integer, default=0, nullable=False)  # 0=auto, 1=manual
 
     # Relationships
     api_keys = relationship("APIKey", back_populates="user")
@@ -77,6 +87,14 @@ class UsageLog(Base):
 
     # Relationships
     user = relationship("User", back_populates="usage_logs")
+
+class SignupAttempt(Base):
+    __tablename__ = "signup_attempts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ip_address = Column(String, index=True, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    success = Column(Integer, default=0, nullable=False)  # 0=failed, 1=success
 
 # =============================================================================
 # DATABASE HELPERS

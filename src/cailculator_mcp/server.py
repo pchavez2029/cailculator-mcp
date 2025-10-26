@@ -9,9 +9,32 @@ import logging
 import sys
 from typing import Any, Dict
 
-from .auth import validate_api_key
-from .config import get_settings
-from .tools import TOOLS_DEFINITIONS, call_tool
+# Lazy imports to speed up server startup
+# These will be imported only when needed
+_auth_module = None
+_config_module = None
+_tools_module = None
+
+def get_auth():
+    global _auth_module
+    if _auth_module is None:
+        from .auth import validate_api_key as _validate
+        _auth_module = type('obj', (object,), {'validate_api_key': _validate})
+    return _auth_module
+
+def get_config():
+    global _config_module
+    if _config_module is None:
+        from .config import get_settings as _get_settings
+        _config_module = type('obj', (object,), {'get_settings': _get_settings})
+    return _config_module
+
+def get_tools():
+    global _tools_module
+    if _tools_module is None:
+        from .tools import TOOLS_DEFINITIONS as _tools_defs, call_tool as _call_tool
+        _tools_module = type('obj', (object,), {'TOOLS_DEFINITIONS': _tools_defs, 'call_tool': _call_tool})
+    return _tools_module
 
 # Configure logging
 logging.basicConfig(
@@ -32,8 +55,15 @@ class MCPServer:
     """
     
     def __init__(self):
-        self.settings = get_settings()
-        logger.setLevel(self.settings.log_level)
+        self._settings = None
+
+    @property
+    def settings(self):
+        """Lazy load settings only when accessed."""
+        if self._settings is None:
+            self._settings = get_config().get_settings()
+            logger.setLevel(self._settings.log_level)
+        return self._settings
         
     async def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -100,14 +130,15 @@ class MCPServer:
     async def handle_list_tools(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Handle tools/list request - return available tools.
-        
+
         Returns:
             Dict with 'tools' array
         """
-        logger.info(f"Listing {len(TOOLS_DEFINITIONS)} available tools")
-        
+        tools = get_tools()
+        logger.info(f"Listing {len(tools.TOOLS_DEFINITIONS)} available tools")
+
         return {
-            "tools": TOOLS_DEFINITIONS
+            "tools": tools.TOOLS_DEFINITIONS
         }
     
     async def handle_call_tool(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -141,7 +172,7 @@ class MCPServer:
             }
         
         # Validate API key with auth server
-        is_valid, error_message = await validate_api_key(api_key)
+        is_valid, error_message = await get_auth().validate_api_key(api_key)
         
         if not is_valid:
             logger.error(f"API key validation failed: {error_message}")
@@ -157,7 +188,7 @@ class MCPServer:
         
         # Execute the tool
         try:
-            result = await call_tool(tool_name, arguments)
+            result = await get_tools().call_tool(tool_name, arguments)
             
             # Check response size to prevent 1MB limit errors
             result_json = json.dumps(result, indent=2)

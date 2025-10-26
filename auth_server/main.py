@@ -7,15 +7,19 @@ from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from pathlib import Path
 import stripe
 import secrets
 import hashlib
+import requests
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 from database import (
     get_db,
@@ -23,7 +27,8 @@ from database import (
     User,
     APIKey,
     UsageLog,
-    SubscriptionTier
+    SubscriptionTier,
+    SignupAttempt
 )
 
 app = FastAPI(
@@ -32,20 +37,41 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Templates directory
+# Templates and static files directory
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 # Stripe configuration
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-# Stripe Price IDs
+# Stripe Price IDs (will be updated after creating new products)
 STRIPE_PRICES = {
-    "student": "price_1SLxZ4Rum9Df5I8USTanHMvF",
-    "teacher": "price_1SLxgTRum9Df5I8Uei1Zhszt",
-    "indie": "price_1SLxi7Rum9Df5I8Ub67jWs3T",
-    "team": "price_1SLxjnRum9Df5I8UujSBt0EW"
+    "indie": "price_TBD",        # $19/month - 5,000 requests
+    "academic": "price_TBD",     # $99/month - 25,000 requests
+    "professional": "price_TBD"  # $299/month - 100,000 requests
+    # Free tier doesn't need Stripe
+    # Enterprise is custom pricing (contact sales)
 }
+
+# SendGrid configuration
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL", "iknowpi@gmail.com")
+
+# Auto-approved countries (US, Canada, EU, UK, Australia, Japan, New Zealand)
+AUTO_APPROVED_COUNTRIES = {
+    "US", "CA",  # North America
+    "GB", "IE",  # UK & Ireland
+    "AU", "NZ",  # Oceania
+    "JP", "KR", "SG",  # Asia (friendly)
+    # EU countries
+    "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR",
+    "DE", "GR", "HU", "IT", "LV", "LT", "LU", "MT", "NL", "PL",
+    "PT", "RO", "SK", "SI", "ES", "SE", "NO", "CH", "IS"
+}
+
+# IP rate limiting: max signups per IP per day
+MAX_SIGNUPS_PER_IP_PER_DAY = 3
 
 # CORS middleware
 app.add_middleware(
@@ -92,16 +118,139 @@ class UsageRequest(BaseModel):
 # =============================================================================
 
 TIER_LIMITS = {
-    "student": 1_000,      # $4.99/month - 1,000 requests
-    "teacher": 5_000,      # $9.99/month - 5,000 requests
-    "indie": 15_000,       # $49/month - 15,000 requests
-    "team": 100_000,       # $250/month - 100,000 requests
-    "enterprise": -1       # $3K+/month - Unlimited
+    "free": 100,            # $0/month - 100 requests
+    "indie": 5_000,         # $19/month - 5,000 requests
+    "academic": 25_000,     # $99/month - 25,000 requests
+    "professional": 100_000,# $299/month - 100,000 requests
+    "enterprise": -1        # Custom pricing - Unlimited
 }
 
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+
+def get_client_ip(request: Request) -> str:
+    """Get client IP address from request"""
+    # Check for Railway/proxy forwarded IP first
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip
+
+    # Fallback to direct connection
+    if request.client:
+        return request.client.host
+
+    return "unknown"
+
+def get_country_from_ip(ip_address: str) -> Optional[str]:
+    """
+    Get country code from IP address using free ipapi.co service
+    Returns 2-letter ISO country code or None
+    """
+    if ip_address == "unknown" or ip_address.startswith("127.") or ip_address.startswith("192.168."):
+        return "US"  # Default for localhost/development
+
+    try:
+        response = requests.get(f"https://ipapi.co/{ip_address}/country/", timeout=2)
+        if response.status_code == 200:
+            country_code = response.text.strip()
+            return country_code if len(country_code) == 2 else None
+    except:
+        pass
+
+    return None
+
+def check_ip_rate_limit(ip_address: str, db: Session) -> tuple[bool, int]:
+    """
+    Check if IP has exceeded signup rate limit
+    Returns: (is_allowed, signup_count_today)
+    """
+    # Count signups from this IP in last 24 hours
+    twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+
+    signup_count = db.query(SignupAttempt).filter(
+        SignupAttempt.ip_address == ip_address,
+        SignupAttempt.timestamp >= twenty_four_hours_ago
+    ).count()
+
+    is_allowed = signup_count < MAX_SIGNUPS_PER_IP_PER_DAY
+    return is_allowed, signup_count
+
+def send_verification_email(email: str, verification_token: str, base_url: str) -> bool:
+    """
+    Send email verification link using SendGrid
+    Returns True if successful, False otherwise
+    """
+    if not SENDGRID_API_KEY:
+        print("WARNING: SENDGRID_API_KEY not set, skipping email")
+        return False
+
+    verification_url = f"{base_url}/verify-email?token={verification_token}"
+
+    message = Mail(
+        from_email=SENDGRID_FROM_EMAIL,
+        to_emails=email,
+        subject="Verify your CAILculator MCP account",
+        html_content=f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #667eea;">CAILculator MCP</h1>
+                    <p style="color: #666; font-style: italic;">"Better math, less suffering"</p>
+                </div>
+
+                <h2>Welcome to CAILculator MCP!</h2>
+
+                <p>Thank you for signing up. You're one step away from accessing high-dimensional mathematical analysis tools.</p>
+
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{verification_url}"
+                       style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                              color: white;
+                              padding: 15px 40px;
+                              text-decoration: none;
+                              border-radius: 5px;
+                              display: inline-block;
+                              font-weight: bold;">
+                        Verify Email Address
+                    </a>
+                </div>
+
+                <p style="color: #666; font-size: 0.9em;">
+                    This link will expire in 24 hours. If you didn't create this account, you can safely ignore this email.
+                </p>
+
+                <p style="color: #666; font-size: 0.9em; margin-top: 30px;">
+                    Or copy and paste this URL into your browser:<br>
+                    <a href="{verification_url}" style="color: #667eea;">{verification_url}</a>
+                </p>
+
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+
+                <p style="color: #999; font-size: 0.85em; text-align: center;">
+                    <strong>Chavez AI Labs</strong><br>
+                    Research tools for high-dimensional mathematics<br>
+                    <a href="mailto:iknowpi@gmail.com" style="color: #667eea;">iknowpi@gmail.com</a>
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+    )
+
+    try:
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        print(f"Verification email sent to {email}: Status {response.status_code}")
+        return response.status_code in [200, 202]
+    except Exception as e:
+        print(f"Failed to send email to {email}: {str(e)}")
+        return False
 
 def check_rate_limit(api_key: str, db: Session) -> tuple[bool, int, int]:
     """
@@ -164,49 +313,166 @@ async def health_check(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Database error: {str(e)}")
 
-@app.post("/signup", response_model=SignupResponse)
-async def signup(request: SignupRequest, db: Session = Depends(get_db)):
+@app.post("/signup")
+async def signup(signup_request: SignupRequest, request: Request, db: Session = Depends(get_db)):
     """
-    Create new user account and generate API key
-    Student tier by default (requires payment)
+    Create new user account and send verification email
+    API key generated after email verification
     """
+    # Get client IP
+    client_ip = get_client_ip(request)
+
+    # Check IP rate limit
+    is_allowed, signup_count = check_ip_rate_limit(client_ip, db)
+    if not is_allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many signup attempts from your IP address. Limit: {MAX_SIGNUPS_PER_IP_PER_DAY} per day."
+        )
+
     # Check if user already exists
-    existing_user = db.query(User).filter(User.email == request.email).first()
+    existing_user = db.query(User).filter(User.email == signup_request.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Create user
+    # Get country from IP
+    country_code = get_country_from_ip(client_ip)
+
+    # Check if auto-approved or requires manual approval
+    requires_manual = (country_code not in AUTO_APPROVED_COUNTRIES) if country_code else True
+
+    # Generate verification token
+    verification_token = secrets.token_urlsafe(32)
+    token_expires = datetime.utcnow() + timedelta(hours=24)
+
+    # Create user (WITHOUT API key yet)
     user = User(
-        email=request.email,
-        name=request.name or request.email.split('@')[0],
-        tier=SubscriptionTier.STUDENT
+        email=signup_request.email,
+        name=signup_request.name or signup_request.email.split('@')[0],
+        tier=SubscriptionTier.FREE,
+        email_verified=0,
+        verification_token=verification_token,
+        verification_token_expires=token_expires,
+        country_code=country_code,
+        signup_ip=client_ip,
+        requires_manual_approval=1 if requires_manual else 0
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
+    # Log signup attempt
+    signup_attempt = SignupAttempt(
+        ip_address=client_ip,
+        success=1
+    )
+    db.add(signup_attempt)
+    db.commit()
+
+    # Get base URL
+    base_url = os.getenv("RAILWAY_PUBLIC_DOMAIN", request.base_url)
+    if isinstance(base_url, str) and not base_url.startswith("http"):
+        base_url = f"https://{base_url}"
+    else:
+        base_url = str(base_url).rstrip("/")
+
+    # Send verification email
+    email_sent = send_verification_email(signup_request.email, verification_token, base_url)
+
+    if not email_sent:
+        # Email failed but user created - they can resend later
+        print(f"WARNING: Failed to send verification email to {signup_request.email}")
+
+    response_message = "Account created! Please check your email to verify your account."
+    if requires_manual:
+        response_message += f" Note: Signups from {country_code or 'your region'} require manual approval. You will receive your API key within 24 hours of approval."
+
+    return {
+        "message": response_message,
+        "email": signup_request.email,
+        "requires_manual_approval": requires_manual,
+        "email_sent": email_sent
+    }
+
+@app.get("/signup-free", response_class=HTMLResponse)
+async def signup_free_page(request: Request):
+    """
+    Free tier signup page (simple email form)
+    """
+    return templates.TemplateResponse("signup_free.html", {"request": request})
+
+@app.get("/verify-email", response_class=HTMLResponse)
+async def verify_email(request: Request, token: str, db: Session = Depends(get_db)):
+    """
+    Verify email address and generate API key
+    """
+    # Find user by verification token
+    user = db.query(User).filter(User.verification_token == token).first()
+
+    if not user:
+        return templates.TemplateResponse("verification_result.html", {
+            "request": request,
+            "success": False,
+            "message": "Invalid verification link. The token may have expired or already been used."
+        })
+
+    # Check if token expired
+    if user.verification_token_expires and user.verification_token_expires < datetime.utcnow():
+        return templates.TemplateResponse("verification_result.html", {
+            "request": request,
+            "success": False,
+            "message": "Verification link has expired. Please sign up again."
+        })
+
+    # Check if already verified
+    if user.email_verified == 1:
+        # Find existing API key
+        existing_key = db.query(APIKey).filter(APIKey.user_id == user.id).first()
+        if existing_key:
+            return templates.TemplateResponse("verification_result.html", {
+                "request": request,
+                "success": True,
+                "message": "Email already verified. Your API key was sent previously.",
+                "already_verified": True
+            })
+
+    # Check if requires manual approval
+    if user.requires_manual_approval == 1:
+        user.email_verified = 1
+        user.verification_token = None
+        db.commit()
+
+        return templates.TemplateResponse("verification_result.html", {
+            "request": request,
+            "success": True,
+            "message": f"Email verified! Your signup from {user.country_code or 'your region'} requires manual approval. You will receive your API key within 24 hours.",
+            "requires_approval": True
+        })
+
     # Generate API key
-    import secrets
-    api_key = f"cail_{secrets.token_urlsafe(32)}"
+    api_key_plain = f"cail_{secrets.token_urlsafe(32)}"
+    api_key_hash = hashlib.sha256(api_key_plain.encode()).hexdigest()
 
-    # Store hashed key
-    import hashlib
-    key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+    # Mark as verified
+    user.email_verified = 1
+    user.verification_token = None
 
+    # Create API key record
     api_key_record = APIKey(
         user_id=user.id,
-        key_hash=key_hash
+        key_hash=api_key_hash
     )
     db.add(api_key_record)
     db.commit()
 
-    return SignupResponse(
-        user_id=user.id,
-        email=user.email,
-        api_key=api_key,  # Only time we return plaintext
-        tier=user.tier.value,
-        message="Account created! Store your API key securely - you won't see it again."
-    )
+    return templates.TemplateResponse("verification_result.html", {
+        "request": request,
+        "success": True,
+        "api_key": api_key_plain,
+        "email": user.email,
+        "tier": user.tier.value,
+        "message": "Email verified successfully! Your API key is ready."
+    })
 
 @app.post("/validate", response_model=ValidateResponse)
 async def validate(request: ValidateRequest, db: Session = Depends(get_db)):

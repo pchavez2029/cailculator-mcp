@@ -31,6 +31,12 @@
             padding: 60px 20px 40px;
         }
 
+        header .logo {
+            max-width: 400px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
         header h1 {
             font-size: 3em;
             margin-bottom: 10px;
@@ -75,11 +81,6 @@
             text-align: center;
         }
 
-        .feature-icon {
-            font-size: 3em;
-            margin-bottom: 15px;
-        }
-
         .feature h3 {
             color: #764ba2;
             margin-bottom: 10px;
@@ -119,21 +120,6 @@
 
         .pricing-card.featured {
             border: 3px solid #667eea;
-            transform: scale(1.05);
-        }
-
-        .pricing-card.featured::before {
-            content: "POPULAR";
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #667eea;
-            color: white;
-            padding: 5px 20px;
-            border-radius: 20px;
-            font-size: 0.8em;
-            font-weight: bold;
         }
 
         .pricing-card h3 {
@@ -211,6 +197,13 @@
             opacity: 0.9;
         }
 
+        footer .footer-logo {
+            max-width: 200px;
+            height: auto;
+            margin-bottom: 15px;
+            opacity: 0.8;
+        }
+
         footer a {
             color: white;
             text-decoration: underline;
@@ -240,6 +233,7 @@
 <body>
     <div class="container">
         <header>
+            <img src="/static/logo.png" alt="Chavez AI Labs" class="logo">
             <h1>CAILculator MCP</h1>
             <p class="tagline">"Better math, less suffering"</p>
             <p class="subtitle">High-dimensional data analysis via Model Context Protocol</p>
@@ -249,22 +243,22 @@
             <h2>Why CAILculator?</h2>
             <div class="feature-grid">
                 <div class="feature">
-                    <div class="feature-icon">🔬</div>
                     <h3>Research-Grade</h3>
                     <p>Built on published mathematical research with proven theorems</p>
                 </div>
                 <div class="feature">
-                    <div class="feature-icon">📊</div>
                     <h3>Dual Frameworks</h3>
                     <p>Cayley-Dickson and Clifford algebras for comprehensive analysis</p>
                 </div>
                 <div class="feature">
-                    <div class="feature-icon">🚀</div>
-                    <h3>Scales to 1000+ Dimensions</h3>
-                    <p>Handle complexity traditional methods can't</p>
+                    <h3>16D to 256D Analysis</h3>
+                    <p>Handle complexity traditional algebras can't reach</p>
                 </div>
                 <div class="feature">
-                    <div class="feature-icon">🤖</div>
+                    <h3>E8 Lie Algebra Integration</h3>
+                    <p>Connect exceptional geometry to zero divisor transforms</p>
+                </div>
+                <div class="feature">
                     <h3>AI-Native</h3>
                     <p>Works seamlessly with Claude Desktop and other MCP clients</p>
                 </div>
@@ -275,55 +269,55 @@
             <h2>Choose Your Plan</h2>
             <div class="pricing-grid">
                 <div class="pricing-card">
-                    <h3>Student</h3>
-                    <div class="price">$4.99<span class="price-period">/month</span></div>
-                    <div class="requests">1,000 requests/month</div>
+                    <h3>Free</h3>
+                    <div class="price">$0<span class="price-period">/month</span></div>
+                    <div class="requests">100 requests/month</div>
                     <ul class="features-list">
                         <li>Zero divisor detection</li>
                         <li>Pattern analysis</li>
                         <li>Chavez Transform</li>
-                        <li>Email support</li>
+                        <li>1 API key</li>
                     </ul>
-                    <button class="subscribe-btn" onclick="subscribe('student')">Subscribe</button>
+                    <button class="subscribe-btn" onclick="subscribeFree()">Get Started Free</button>
                 </div>
 
                 <div class="pricing-card">
-                    <h3>Teacher</h3>
-                    <div class="price">$9.99<span class="price-period">/month</span></div>
+                    <h3>Indie</h3>
+                    <div class="price">$19<span class="price-period">/month</span></div>
                     <div class="requests">5,000 requests/month</div>
                     <ul class="features-list">
-                        <li>Everything in Student</li>
-                        <li>Priority support</li>
-                        <li>Classroom resources</li>
-                        <li>Educational discount</li>
-                    </ul>
-                    <button class="subscribe-btn" onclick="subscribe('teacher')">Subscribe</button>
-                </div>
-
-                <div class="pricing-card featured">
-                    <h3>Indie</h3>
-                    <div class="price">$49<span class="price-period">/month</span></div>
-                    <div class="requests">15,000 requests/month</div>
-                    <ul class="features-list">
-                        <li>Everything in Teacher</li>
+                        <li>Everything in Free</li>
                         <li>Advanced visualizations</li>
                         <li>E8 lattice analysis</li>
-                        <li>Priority email support</li>
+                        <li>Email support</li>
                     </ul>
                     <button class="subscribe-btn" onclick="subscribe('indie')">Subscribe</button>
                 </div>
 
                 <div class="pricing-card">
-                    <h3>Team</h3>
-                    <div class="price">$250<span class="price-period">/month</span></div>
-                    <div class="requests">100,000 requests/month</div>
+                    <h3>Academic</h3>
+                    <div class="price">$99<span class="price-period">/month</span></div>
+                    <div class="requests">25,000 requests/month</div>
                     <ul class="features-list">
                         <li>Everything in Indie</li>
-                        <li>Team management</li>
-                        <li>Shared API keys</li>
-                        <li>Dedicated support</li>
+                        <li>Priority support</li>
+                        <li>Research collaboration</li>
+                        <li>Citation assistance</li>
                     </ul>
-                    <button class="subscribe-btn" onclick="subscribe('team')">Subscribe</button>
+                    <button class="subscribe-btn" onclick="subscribe('academic')">Subscribe</button>
+                </div>
+
+                <div class="pricing-card">
+                    <h3>Professional</h3>
+                    <div class="price">$299<span class="price-period">/month</span></div>
+                    <div class="requests">100,000 requests/month</div>
+                    <ul class="features-list">
+                        <li>Everything in Academic</li>
+                        <li>Dedicated support</li>
+                        <li>Custom integrations</li>
+                        <li>Usage analytics</li>
+                    </ul>
+                    <button class="subscribe-btn" onclick="subscribe('professional')">Subscribe</button>
                 </div>
 
                 <div class="pricing-card">
@@ -331,12 +325,12 @@
                     <div class="price">Custom</div>
                     <div class="requests">Unlimited requests</div>
                     <ul class="features-list">
-                        <li>Everything in Team</li>
-                        <li>Custom integration</li>
-                        <li>SLA guarantee</li>
-                        <li>Phone support</li>
+                        <li>Multiple API keys</li>
+                        <li>SLA guarantees</li>
+                        <li>White-label options</li>
+                        <li>Phone & Slack support</li>
                     </ul>
-                    <a href="mailto:paul@chavezailabs.com" class="subscribe-btn">Contact Sales</a>
+                    <a href="mailto:iknowpi@gmail.com" class="subscribe-btn">Contact Sales</a>
                 </div>
             </div>
         </div>
@@ -350,9 +344,10 @@
         </div>
 
         <footer>
+            <img src="/static/logo.png" alt="Chavez AI Labs" class="footer-logo">
             <p><strong>Chavez AI Labs</strong></p>
             <p>Built on research published at <a href="https://zenodo.org/records/17402496" target="_blank">DOI: 10.5281/zenodo.17402496</a></p>
-            <p style="margin-top: 10px;">Contact: <a href="mailto:paul@chavezailabs.com">paul@chavezailabs.com</a></p>
+            <p style="margin-top: 10px;">Contact: <a href="mailto:iknowpi@gmail.com">iknowpi@gmail.com</a></p>
         </footer>
     </div>
 
@@ -360,6 +355,11 @@
         function subscribe(tier) {
             // Redirect to Stripe checkout
             window.location.href = `/create-checkout-session?tier=${tier}`;
+        }
+
+        function subscribeFree() {
+            // Redirect to free tier signup (email only, no payment)
+            window.location.href = `/signup-free`;
         }
     </script>
 </body>

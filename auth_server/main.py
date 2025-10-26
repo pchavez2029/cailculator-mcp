@@ -40,7 +40,12 @@ app = FastAPI(
 # Templates and static files directory
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
-app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+
+# Create static directory if it doesn't exist (for Railway deployment)
+static_dir = BASE_DIR / "static"
+static_dir.mkdir(parents=True, exist_ok=True)
+
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # Stripe configuration
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")

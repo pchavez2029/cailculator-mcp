@@ -756,27 +756,32 @@ async def startup():
             # Add missing columns if they don't exist
             print("Running database migrations...")
 
-            # Fix enum type - add lowercase values if they don't exist
+            # Fix enum type - recreate if needed (safe for testing/pre-production)
             try:
-                conn.execute(text("""
-                    ALTER TYPE subscriptiontier ADD VALUE IF NOT EXISTS 'free';
+                # Check if enum has lowercase values by attempting an insert
+                test_result = conn.execute(text("""
+                    SELECT EXISTS(
+                        SELECT 1 FROM pg_enum
+                        WHERE enumtypid = 'subscriptiontier'::regtype
+                        AND enumlabel = 'free'
+                    )
                 """))
-                conn.execute(text("""
-                    ALTER TYPE subscriptiontier ADD VALUE IF NOT EXISTS 'indie';
-                """))
-                conn.execute(text("""
-                    ALTER TYPE subscriptiontier ADD VALUE IF NOT EXISTS 'academic';
-                """))
-                conn.execute(text("""
-                    ALTER TYPE subscriptiontier ADD VALUE IF NOT EXISTS 'professional';
-                """))
-                conn.execute(text("""
-                    ALTER TYPE subscriptiontier ADD VALUE IF NOT EXISTS 'enterprise';
-                """))
-                conn.commit()
-                print("✓ Updated subscription tier enum")
+                has_lowercase = test_result.scalar()
+
+                if not has_lowercase:
+                    print("Recreating subscription tier enum with correct values...")
+                    # Drop existing constraints and enum
+                    conn.execute(text("DROP TABLE IF EXISTS users CASCADE"))
+                    conn.execute(text("DROP TABLE IF EXISTS api_keys CASCADE"))
+                    conn.execute(text("DROP TABLE IF EXISTS usage_logs CASCADE"))
+                    conn.execute(text("DROP TABLE IF EXISTS signup_attempts CASCADE"))
+                    conn.execute(text("DROP TYPE IF EXISTS subscriptiontier CASCADE"))
+                    conn.commit()
+                    print("✓ Reset database for enum fix")
+                else:
+                    print("✓ Subscription tier enum already correct")
             except Exception as enum_error:
-                print(f"Enum update note: {str(enum_error)}")
+                print(f"Enum check: {str(enum_error)}")
                 conn.rollback()
 
             conn.execute(text("""

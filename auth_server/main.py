@@ -747,6 +747,56 @@ async def get_usage(api_key: str, db: Session = Depends(get_db)):
 async def startup():
     """Initialize database on startup"""
     print("Starting CAILculator Auth Server...")
+
+    # Run migrations first
+    try:
+        from sqlalchemy import text
+        from database import engine
+        with engine.connect() as conn:
+            # Add missing columns if they don't exist
+            print("Running database migrations...")
+
+            conn.execute(text("""
+                ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS email_verified INTEGER DEFAULT 0 NOT NULL
+            """))
+
+            conn.execute(text("""
+                ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS verification_token VARCHAR
+            """))
+
+            conn.execute(text("""
+                ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS verification_token_expires TIMESTAMP
+            """))
+
+            conn.execute(text("""
+                ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS country_code VARCHAR(2)
+            """))
+
+            conn.execute(text("""
+                ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS signup_ip VARCHAR
+            """))
+
+            conn.execute(text("""
+                ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS requires_manual_approval INTEGER DEFAULT 0 NOT NULL
+            """))
+
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS ix_users_verification_token
+                ON users(verification_token)
+            """))
+
+            conn.commit()
+            print("✓ Database migrations completed")
+    except Exception as e:
+        print(f"Migration warning: {str(e)}")
+
+    # Initialize tables
     init_db()
     print("Database initialized!")
     print("Server ready!")

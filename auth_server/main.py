@@ -756,33 +756,21 @@ async def startup():
             # Add missing columns if they don't exist
             print("Running database migrations...")
 
-            # Fix enum type - recreate if needed (safe for testing/pre-production)
-            try:
-                # Check if enum has lowercase values by attempting an insert
-                test_result = conn.execute(text("""
-                    SELECT EXISTS(
-                        SELECT 1 FROM pg_enum
-                        WHERE enumtypid = 'subscriptiontier'::regtype
-                        AND enumlabel = 'free'
-                    )
-                """))
-                has_lowercase = test_result.scalar()
-
-                if not has_lowercase:
-                    print("Recreating subscription tier enum with correct values...")
-                    # Drop existing constraints and enum
+            # Force database reset if RESET_DATABASE env var is set
+            reset_db = os.getenv("RESET_DATABASE", "false").lower() == "true"
+            if reset_db:
+                print("RESET_DATABASE=true detected - recreating all tables...")
+                try:
                     conn.execute(text("DROP TABLE IF EXISTS users CASCADE"))
                     conn.execute(text("DROP TABLE IF EXISTS api_keys CASCADE"))
                     conn.execute(text("DROP TABLE IF EXISTS usage_logs CASCADE"))
                     conn.execute(text("DROP TABLE IF EXISTS signup_attempts CASCADE"))
                     conn.execute(text("DROP TYPE IF EXISTS subscriptiontier CASCADE"))
                     conn.commit()
-                    print("✓ Reset database for enum fix")
-                else:
-                    print("✓ Subscription tier enum already correct")
-            except Exception as enum_error:
-                print(f"Enum check: {str(enum_error)}")
-                conn.rollback()
+                    print("✓ Database reset complete - tables will be recreated")
+                except Exception as reset_error:
+                    print(f"Reset error: {str(reset_error)}")
+                    conn.rollback()
 
             conn.execute(text("""
                 ALTER TABLE users

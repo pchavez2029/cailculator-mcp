@@ -756,6 +756,29 @@ async def startup():
             # Add missing columns if they don't exist
             print("Running database migrations...")
 
+            # Fix enum type - add lowercase values if they don't exist
+            try:
+                conn.execute(text("""
+                    ALTER TYPE subscriptiontier ADD VALUE IF NOT EXISTS 'free';
+                """))
+                conn.execute(text("""
+                    ALTER TYPE subscriptiontier ADD VALUE IF NOT EXISTS 'indie';
+                """))
+                conn.execute(text("""
+                    ALTER TYPE subscriptiontier ADD VALUE IF NOT EXISTS 'academic';
+                """))
+                conn.execute(text("""
+                    ALTER TYPE subscriptiontier ADD VALUE IF NOT EXISTS 'professional';
+                """))
+                conn.execute(text("""
+                    ALTER TYPE subscriptiontier ADD VALUE IF NOT EXISTS 'enterprise';
+                """))
+                conn.commit()
+                print("✓ Updated subscription tier enum")
+            except Exception as enum_error:
+                print(f"Enum update note: {str(enum_error)}")
+                conn.rollback()
+
             conn.execute(text("""
                 ALTER TABLE users
                 ADD COLUMN IF NOT EXISTS email_verified INTEGER DEFAULT 0 NOT NULL

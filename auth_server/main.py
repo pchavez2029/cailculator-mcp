@@ -50,11 +50,11 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 # Stripe configuration
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-# Stripe Price IDs (Test Mode - replace with live mode IDs before production launch)
+# Stripe Price IDs (LIVE MODE - Production)
 STRIPE_PRICES = {
-    "indie": "price_1SMvVBRum9Df5I8UG66yJuXW",        # $19/month - 5,000 requests
-    "academic": "price_1SMvZ0Rum9Df5I8UFQAL8XwJ",     # $99/month - 25,000 requests
-    "professional": "price_1SMvaHRum9Df5I8UHkcNDs2u"  # $299/month - 100,000 requests
+    "indie": "price_1SMvzF2NNm10BnLCEPbug1yj",        # $19/month - 5,000 requests
+    "academic": "price_1SMvz42NNm10BnLCM3HNLmg0",     # $99/month - 25,000 requests
+    "professional": "price_1SMvyr2NNm10BnLCJowLJz7d"  # $299/month - 100,000 requests
     # Free tier doesn't need Stripe
     # Enterprise is custom pricing (contact sales)
 }

@@ -49,6 +49,7 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # Stripe configuration
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
 # Stripe Price IDs (LIVE MODE - Production)
 STRIPE_PRICES = {
@@ -818,14 +819,27 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     payload = await request.body()
     sig_header = request.headers.get('stripe-signature')
 
-    # For now, just log the event (we'll add webhook secret later)
+    # Verify webhook signature for security
     try:
-        import json
-        event = stripe.Event.construct_from(
-            json.loads(payload.decode('utf-8')), stripe.api_key
-        )
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        if STRIPE_WEBHOOK_SECRET:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, STRIPE_WEBHOOK_SECRET
+            )
+        else:
+            # Fallback for development (not recommended for production)
+            import json
+            event = stripe.Event.construct_from(
+                json.loads(payload.decode('utf-8')), stripe.api_key
+            )
+            print("WARNING: STRIPE_WEBHOOK_SECRET not set, webhook signature not verified")
+    except ValueError as e:
+        # Invalid payload
+        print(f"Invalid webhook payload: {str(e)}")
+        raise HTTPException(status_code=400, detail="Invalid payload")
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        print(f"Invalid webhook signature: {str(e)}")
+        raise HTTPException(status_code=400, detail="Invalid signature")
 
     # Handle successful subscription creation
     if event['type'] == 'checkout.session.completed':

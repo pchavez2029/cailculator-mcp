@@ -5,13 +5,57 @@ Tool definitions and implementations for the MCP server
 
 import json
 import logging
-import numpy as np
 from typing import Any, Dict, List
 
-from .transforms import ChavezTransform, create_canonical_six_pathion, Pathion
-from .patterns import PatternDetector
-from .hypercomplex import create_hypercomplex, find_zero_divisors
-from .clifford_algebras import create_clifford_algebra
+# Lazy imports - these modules have heavy dependencies (matplotlib, clifford, etc.)
+# They will be imported only when tool functions are actually called
+_transforms_module = None
+_patterns_module = None
+_hypercomplex_module = None
+_clifford_module = None
+_numpy_module = None
+
+def _get_numpy():
+    global _numpy_module
+    if _numpy_module is None:
+        import numpy as np
+        _numpy_module = np
+    return _numpy_module
+
+def _get_transforms():
+    global _transforms_module
+    if _transforms_module is None:
+        from .transforms import ChavezTransform, create_canonical_six_pathion, Pathion
+        _transforms_module = type('obj', (object,), {
+            'ChavezTransform': ChavezTransform,
+            'create_canonical_six_pathion': create_canonical_six_pathion,
+            'Pathion': Pathion
+        })
+    return _transforms_module
+
+def _get_patterns():
+    global _patterns_module
+    if _patterns_module is None:
+        from .patterns import PatternDetector
+        _patterns_module = type('obj', (object,), {'PatternDetector': PatternDetector})
+    return _patterns_module
+
+def _get_hypercomplex():
+    global _hypercomplex_module
+    if _hypercomplex_module is None:
+        from .hypercomplex import create_hypercomplex, find_zero_divisors
+        _hypercomplex_module = type('obj', (object,), {
+            'create_hypercomplex': create_hypercomplex,
+            'find_zero_divisors': find_zero_divisors
+        })
+    return _hypercomplex_module
+
+def _get_clifford():
+    global _clifford_module
+    if _clifford_module is None:
+        from .clifford_algebras import create_clifford_algebra
+        _clifford_module = type('obj', (object,), {'create_clifford_algebra': create_clifford_algebra})
+    return _clifford_module
 
 logger = logging.getLogger(__name__)
 
@@ -374,8 +418,9 @@ async def compute_high_dimensional(arguments: Dict[str, Any]) -> Dict[str, Any]:
             num_samples = 1000
             if operands and len(operands[0]) == 1:
                 num_samples = int(operands[0][0])
-            
-            pairs = find_zero_divisors(dimension, num_samples)
+
+            hypercomplex = _get_hypercomplex()
+            pairs = hypercomplex.find_zero_divisors(dimension, num_samples)
             
             return {
                 "success": True,
@@ -405,7 +450,8 @@ async def compute_high_dimensional(arguments: Dict[str, Any]) -> Dict[str, Any]:
         
         # Create hypercomplex numbers from operands
         try:
-            hypercomplex_operands = [create_hypercomplex(dimension, op) for op in operands]
+            hypercomplex = _get_hypercomplex()
+            hypercomplex_operands = [hypercomplex.create_hypercomplex(dimension, op) for op in operands]
         except Exception as e:
             return {"error": f"Failed to create hypercomplex numbers: {str(e)}"}
         
@@ -497,7 +543,8 @@ async def compute_high_dimensional(arguments: Dict[str, Any]) -> Dict[str, Any]:
                 
                 # Verify: x * x^(-1) should be (1, 0, 0, ...)
                 verification = hypercomplex_operands[0] * result
-                identity = create_hypercomplex(dimension, [1.0] + [0.0]*(dimension-1))
+                hypercomplex = _get_hypercomplex()
+                identity = hypercomplex.create_hypercomplex(dimension, [1.0] + [0.0]*(dimension-1))
                 verification_error = abs(verification - identity)
                 
                 metadata = {
@@ -587,7 +634,8 @@ async def _compute_canonical_six_pattern(framework: str, dimension: int, pattern
     try:
         if framework == "clifford":
             # Create Clifford algebra with auto-selected signature
-            cliff = create_clifford_algebra(dimension=dimension)
+            clifford = _get_clifford()
+            cliff = clifford.create_clifford_algebra(dimension=dimension)
 
             # Get pattern
             P, Q = cliff.canonical_six_clifford(pattern_id)
@@ -640,13 +688,14 @@ async def _compute_canonical_six_pattern(framework: str, dimension: int, pattern
             p_coeffs = [0.0] * dimension
             p_coeffs[a] = 1.0
             p_coeffs[b] = 1.0
-            P = create_hypercomplex(dimension, p_coeffs)
+            hypercomplex = _get_hypercomplex()
+            P = hypercomplex.create_hypercomplex(dimension, p_coeffs)
 
             # Create Q = e_c - e_d
             q_coeffs = [0.0] * dimension
             q_coeffs[c] = 1.0
             q_coeffs[d] = -1.0
-            Q = create_hypercomplex(dimension, q_coeffs)
+            Q = hypercomplex.create_hypercomplex(dimension, q_coeffs)
 
             product = P * Q
             is_zero = abs(product) < 1e-8
@@ -729,24 +778,26 @@ async def chavez_transform(arguments: Dict[str, Any]) -> Dict[str, Any]:
         pattern_id = arguments.get("pattern_id", 1)
         alpha = arguments.get("alpha", 1.0)
         dimension_param = arguments.get("dimension_param", 2)
-        
+
         # Validate inputs
         if not data:
             return {"error": "No data provided"}
-        
+
         if not isinstance(data, list):
             return {"error": "Data must be an array"}
-        
+
+        np = _get_numpy()
         data_array = np.array(data, dtype=float)
         
         if len(data_array) == 0:
             return {"error": "Data array is empty"}
         
         logger.info(f"Transform: {len(data_array)} points, pattern={pattern_id}, alpha={alpha}")
-        
+
         # Create transform and pathion
-        ct = ChavezTransform(dimension=32, alpha=alpha)
-        P = create_canonical_six_pathion(pattern_id)
+        transforms = _get_transforms()
+        ct = transforms.ChavezTransform(dimension=32, alpha=alpha)
+        P = transforms.create_canonical_six_pathion(pattern_id)
         
         # Define function from data (interpolation or direct evaluation)
         if len(data_array) == 1:
@@ -821,32 +872,34 @@ async def detect_patterns(arguments: Dict[str, Any]) -> Dict[str, Any]:
         # Parse arguments
         data = arguments.get("data", [])
         pattern_types = arguments.get("pattern_types", ["all"])
-        
+
         # Validate inputs
         if not data:
             return {"error": "No data provided"}
-        
+
+        np = _get_numpy()
         data_array = np.array(data, dtype=float)
         
         if len(data_array) == 0:
             return {"error": "Data array is empty"}
         
         logger.info(f"Pattern detection: {len(data_array)} points, types={pattern_types}")
-        
+
         # Create pattern detector
-        detector = PatternDetector()
-        
+        patterns_module = _get_patterns()
+        detector = patterns_module.PatternDetector()
+
         # Detect patterns
-        patterns = detector.detect_all_patterns(data_array)
-        
+        detected_patterns = detector.detect_all_patterns(data_array)
+
         # Filter by requested types if not "all"
         if "all" not in pattern_types:
-            patterns = [p for p in patterns if p.pattern_type in pattern_types]
+            detected_patterns = [p for p in detected_patterns if p.pattern_type in pattern_types]
         
         # Format results
         results = {
             "success": True,
-            "patterns_found": len(patterns),
+            "patterns_found": len(detected_patterns),
             "patterns": [
                 {
                     "type": p.pattern_type,
@@ -855,7 +908,7 @@ async def detect_patterns(arguments: Dict[str, Any]) -> Dict[str, Any]:
                     "indices": p.indices if p.indices else [],
                     "metrics": p.metrics
                 }
-                for p in patterns
+                for p in detected_patterns
             ],
             "metadata": {
                 "data_points": len(data_array),
@@ -889,11 +942,12 @@ async def analyze_dataset(arguments: Dict[str, Any]) -> Dict[str, Any]:
         include_transform = arguments.get("include_transform", True)
         include_patterns = arguments.get("include_patterns", True)
         include_statistics = arguments.get("include_statistics", True)
-        
+
         # Validate inputs
         if not data:
             return {"error": "No data provided"}
-        
+
+        np = _get_numpy()
         data_array = np.array(data, dtype=float)
         
         if len(data_array) == 0:
@@ -1087,6 +1141,7 @@ async def _create_zero_divisor_network(data: Dict, output_dir: str, timestamp: s
     """Create network graph of zero divisor basis interactions."""
     try:
         import os
+        # Lazy load matplotlib only when creating visualizations
         import matplotlib.pyplot as plt
         import networkx as nx
 
@@ -1178,7 +1233,7 @@ async def _create_basis_heatmap(data: Dict, output_dir: str, timestamp: str,
     try:
         import os
         import matplotlib.pyplot as plt
-        import numpy as np
+        np = _get_numpy()
 
         dimension = data.get("dimension", 16)
         pattern_id = data.get("pattern_id", 1)
@@ -1244,8 +1299,8 @@ async def _create_canonical_six_plot(data: Dict, output_dir: str, timestamp: str
     try:
         import os
         import matplotlib.pyplot as plt
-        import numpy as np
-        from .transforms import ChavezTransform, create_canonical_six_pathion
+        np = _get_numpy()
+        transforms = _get_transforms()
 
         # Get or compute transform values for all 6 patterns
         transform_values = data.get('transform_values')
@@ -1263,11 +1318,11 @@ async def _create_canonical_six_plot(data: Dict, output_dir: str, timestamp: str
                     result += val * np.exp(-((x_scalar - idx) ** 2))
                 return result
 
-            ct = ChavezTransform(dimension=32, alpha=1.0)
+            ct = transforms.ChavezTransform(dimension=32, alpha=1.0)
             transform_values = []
 
             for pattern_id in range(1, 7):
-                P = create_canonical_six_pathion(pattern_id)
+                P = transforms.create_canonical_six_pathion(pattern_id)
                 val = ct.transform_1d(f, P, d=2, domain=(-5.0, 5.0))
                 transform_values.append(abs(val))
 
@@ -1346,8 +1401,8 @@ async def _create_alpha_plot(data: Dict, output_dir: str, timestamp: str,
     try:
         import os
         import matplotlib.pyplot as plt
-        import numpy as np
-        from .transforms import ChavezTransform, create_canonical_six_pathion
+        np = _get_numpy()
+        transforms = _get_transforms()
 
         # Get parameters
         pattern_id = data.get('pattern_id', 1)
@@ -1373,10 +1428,10 @@ async def _create_alpha_plot(data: Dict, output_dir: str, timestamp: str,
         alpha_values = np.logspace(-1, 1, 20)  # 0.1 to 10
         transform_values = []
 
-        P = create_canonical_six_pathion(pattern_id)
+        P = transforms.create_canonical_six_pathion(pattern_id)
 
         for alpha in alpha_values:
-            ct = ChavezTransform(dimension=32, alpha=alpha)
+            ct = transforms.ChavezTransform(dimension=32, alpha=alpha)
             val = ct.transform_1d(f, P, d=2, domain=(-5.0, 5.0))
             transform_values.append(abs(val))
 
@@ -1442,7 +1497,7 @@ async def _create_e8_mandala(data: Dict, output_dir: str, timestamp: str,
     try:
         import os
         import matplotlib.pyplot as plt
-        import numpy as np
+        np = _get_numpy()
 
         # Get parameters
         pattern_id = data.get('pattern_id', 1)
@@ -1558,9 +1613,9 @@ async def _create_pattern_comparison(data: Dict, output_dir: str, timestamp: str
     try:
         import os
         import matplotlib.pyplot as plt
-        import numpy as np
-        from .hypercomplex import create_hypercomplex
-        from .transforms import ChavezTransform, create_canonical_six_pathion
+        np = _get_numpy()
+        hypercomplex = _get_hypercomplex()
+        transforms = _get_transforms()
 
         # Get parameters
         pattern_ids = data.get('pattern_ids', [1, 2, 3, 4, 5, 6])  # Default: compare all 6
@@ -1599,13 +1654,13 @@ async def _create_pattern_comparison(data: Dict, output_dir: str, timestamp: str
                 p_coeffs = [0.0] * dimension
                 p_coeffs[a] = 1.0
                 p_coeffs[b] = 1.0
-                P_hc = create_hypercomplex(dimension, p_coeffs)
+                P_hc = hypercomplex.create_hypercomplex(dimension, p_coeffs)
 
                 # Create Q = e_c - e_d
                 q_coeffs = [0.0] * dimension
                 q_coeffs[c] = 1.0
                 q_coeffs[d] = -1.0
-                Q_hc = create_hypercomplex(dimension, q_coeffs)
+                Q_hc = hypercomplex.create_hypercomplex(dimension, q_coeffs)
 
                 # Compute product
                 product = P_hc * Q_hc
@@ -1629,8 +1684,8 @@ async def _create_pattern_comparison(data: Dict, output_dir: str, timestamp: str
                         result += val * np.exp(-((x_scalar - idx) ** 2))
                     return result
 
-                ct = ChavezTransform(dimension=32, alpha=1.0)
-                P_pathion = create_canonical_six_pathion(pid)
+                ct = transforms.ChavezTransform(dimension=32, alpha=1.0)
+                P_pathion = transforms.create_canonical_six_pathion(pid)
                 transform_val = ct.transform_1d(f, P_pathion, d=2, domain=(-5.0, 5.0))
                 results['transform_values'].append(float(abs(transform_val)))
 
@@ -1730,8 +1785,8 @@ async def _create_dimensional_scaling(data: Dict, output_dir: str, timestamp: st
     try:
         import os
         import matplotlib.pyplot as plt
-        import numpy as np
-        from .hypercomplex import create_hypercomplex
+        np = _get_numpy()
+        hypercomplex = _get_hypercomplex()
 
         # Define the pattern to test (Pattern 4 from Canonical Six)
         pattern_id = data.get('pattern_id', 4)
@@ -1775,14 +1830,14 @@ async def _create_dimensional_scaling(data: Dict, output_dir: str, timestamp: st
             if a < dim and b < dim:
                 p_coeffs[a] = 1.0
                 p_coeffs[b] = 1.0
-                P = create_hypercomplex(dim, p_coeffs)
+                P = hypercomplex.create_hypercomplex(dim, p_coeffs)
 
                 # Create Q = e_c - e_d
                 q_coeffs = [0.0] * dim
                 if c < dim and d < dim:
                     q_coeffs[c] = 1.0
                     q_coeffs[d] = -1.0
-                    Q = create_hypercomplex(dim, q_coeffs)
+                    Q = hypercomplex.create_hypercomplex(dim, q_coeffs)
 
                     # Compute product
                     product = P * Q
@@ -1887,7 +1942,7 @@ async def _create_custom(data: Dict, output_dir: str, timestamp: str,
     try:
         import os
         import matplotlib.pyplot as plt
-        import numpy as np
+        np = _get_numpy()
 
         # Get chart type
         chart_type = data.get('chart_type', 'line')

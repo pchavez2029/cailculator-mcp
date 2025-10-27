@@ -50,11 +50,11 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 # Stripe configuration
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-# Stripe Price IDs (will be updated after creating new products)
+# Stripe Price IDs (Test Mode - replace with live mode IDs before production launch)
 STRIPE_PRICES = {
-    "indie": "price_TBD",        # $19/month - 5,000 requests
-    "academic": "price_TBD",     # $99/month - 25,000 requests
-    "professional": "price_TBD"  # $299/month - 100,000 requests
+    "indie": "price_1SMvVBRum9Df5I8UG66yJuXW",        # $19/month - 5,000 requests
+    "academic": "price_1SMvZ0Rum9Df5I8UFQAL8XwJ",     # $99/month - 25,000 requests
+    "professional": "price_1SMvaHRum9Df5I8UHkcNDs2u"  # $299/month - 100,000 requests
     # Free tier doesn't need Stripe
     # Enterprise is custom pricing (contact sales)
 }
@@ -257,6 +257,154 @@ def send_verification_email(email: str, verification_token: str, base_url: str) 
         print(f"Failed to send email to {email}: {str(e)}")
         return False
 
+def send_api_key_email(email: str, api_key: str, tier: str) -> bool:
+    """
+    Send API key to user after paid subscription or manual approval
+    Returns True if successful, False otherwise
+    """
+    if not SENDGRID_API_KEY:
+        print("WARNING: SENDGRID_API_KEY not set, skipping email")
+        return False
+
+    tier_info = {
+        "free": {"limit": "100 requests/month", "price": "Free"},
+        "indie": {"limit": "5,000 requests/month", "price": "$19/month"},
+        "academic": {"limit": "25,000 requests/month", "price": "$99/month"},
+        "professional": {"limit": "100,000 requests/month", "price": "$299/month"},
+        "enterprise": {"limit": "Unlimited", "price": "Custom pricing"}
+    }
+
+    tier_details = tier_info.get(tier, {"limit": "Unknown", "price": "Unknown"})
+
+    message = Mail(
+        from_email=SENDGRID_FROM_EMAIL,
+        to_emails=email,
+        subject="Your CAILculator MCP API Key",
+        html_content=f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #667eea;">CAILculator MCP</h1>
+                    <p style="color: #666; font-style: italic;">"Better math, less suffering"</p>
+                </div>
+
+                <h2>Your API Key is Ready!</h2>
+
+                <p>Welcome to CAILculator MCP! Your account has been approved and your API key is ready to use.</p>
+
+                <div style="background-color: #f7fafc; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0;">
+                    <p style="margin: 0; font-weight: bold; color: #667eea;">Your Subscription Details:</p>
+                    <p style="margin: 5px 0;"><strong>Tier:</strong> {tier.capitalize()}</p>
+                    <p style="margin: 5px 0;"><strong>Price:</strong> {tier_details['price']}</p>
+                    <p style="margin: 5px 0;"><strong>Usage Limit:</strong> {tier_details['limit']}</p>
+                </div>
+
+                <div style="background-color: #2d3748; color: #e2e8f0; padding: 15px; border-radius: 5px; margin: 20px 0; font-family: monospace; word-break: break-all;">
+                    <p style="margin: 0; font-size: 0.9em;"><strong>API Key:</strong></p>
+                    <p style="margin: 5px 0; font-size: 1em;">{api_key}</p>
+                </div>
+
+                <div style="background-color: #fff5f5; border-left: 4px solid #f56565; padding: 15px; margin: 20px 0;">
+                    <p style="margin: 0; color: #c53030;"><strong>⚠️ Important:</strong> Keep this API key secure! It's like a password for your account.</p>
+                </div>
+
+                <h3>Getting Started</h3>
+                <ol style="line-height: 1.8;">
+                    <li>Copy your API key above</li>
+                    <li>Add it to your Claude Desktop configuration</li>
+                    <li>Restart Claude Desktop</li>
+                    <li>Start exploring zero divisors in high-dimensional algebras!</li>
+                </ol>
+
+                <p>For setup instructions and documentation, visit: <a href="https://github.com/pchavez2029/CAILculator" style="color: #667eea;">github.com/pchavez2029/CAILculator</a></p>
+
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+
+                <p style="color: #999; font-size: 0.85em; text-align: center;">
+                    <strong>Chavez AI Labs</strong><br>
+                    Research tools for high-dimensional mathematics<br>
+                    Questions? Reply to this email or contact <a href="mailto:iknowpi@gmail.com" style="color: #667eea;">iknowpi@gmail.com</a>
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+    )
+
+    try:
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        print(f"API key email sent to {email}: Status {response.status_code}")
+        return response.status_code in [200, 202]
+    except Exception as e:
+        print(f"Failed to send API key email to {email}: {str(e)}")
+        return False
+
+def send_manual_approval_pending_email(email: str, country_code: str) -> bool:
+    """
+    Notify user that their signup requires manual approval
+    Returns True if successful, False otherwise
+    """
+    if not SENDGRID_API_KEY:
+        print("WARNING: SENDGRID_API_KEY not set, skipping email")
+        return False
+
+    message = Mail(
+        from_email=SENDGRID_FROM_EMAIL,
+        to_emails=email,
+        subject="CAILculator MCP - Manual Approval Required",
+        html_content=f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #667eea;">CAILculator MCP</h1>
+                    <p style="color: #666; font-style: italic;">"Better math, less suffering"</p>
+                </div>
+
+                <h2>Email Verified - Approval Pending</h2>
+
+                <p>Thank you for verifying your email address! Your signup from <strong>{country_code or 'your region'}</strong> requires manual approval as part of our security process.</p>
+
+                <div style="background-color: #f7fafc; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0;">
+                    <p style="margin: 0; font-weight: bold; color: #667eea;">What happens next?</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Our team will review your signup within 24 hours</li>
+                        <li>You'll receive your API key via email once approved</li>
+                        <li>No action required from you - just sit tight!</li>
+                    </ul>
+                </div>
+
+                <div style="background-color: #fffaf0; border-left: 4px solid #ed8936; padding: 15px; margin: 20px 0;">
+                    <p style="margin: 0; color: #7c2d12;"><strong>Why manual approval?</strong></p>
+                    <p style="margin: 10px 0 0 0; color: #7c2d12;">We review signups from certain regions to prevent abuse and maintain service quality for legitimate researchers and developers.</p>
+                </div>
+
+                <p>We appreciate your patience and look forward to having you explore high-dimensional mathematics with CAILculator MCP!</p>
+
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+
+                <p style="color: #999; font-size: 0.85em; text-align: center;">
+                    <strong>Chavez AI Labs</strong><br>
+                    Research tools for high-dimensional mathematics<br>
+                    Questions? Reply to this email or contact <a href="mailto:iknowpi@gmail.com" style="color: #667eea;">iknowpi@gmail.com</a>
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+    )
+
+    try:
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        print(f"Manual approval notification sent to {email}: Status {response.status_code}")
+        return response.status_code in [200, 202]
+    except Exception as e:
+        print(f"Failed to send manual approval email to {email}: {str(e)}")
+        return False
+
 def check_rate_limit(api_key: str, db: Session) -> tuple[bool, int, int]:
     """
     Check if user has exceeded their rate limit
@@ -446,6 +594,9 @@ async def verify_email(request: Request, token: str, db: Session = Depends(get_d
         user.email_verified = 1
         user.verification_token = None
         db.commit()
+
+        # Send manual approval notification email
+        send_manual_approval_pending_email(user.email, user.country_code)
 
         return templates.TemplateResponse("verification_result.html", {
             "request": request,
@@ -710,7 +861,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 db.add(api_key_record)
                 db.commit()
 
-                # TODO: Send email with API key
+                # Send API key via email
+                send_api_key_email(customer_email, api_key_plain, tier)
                 print(f"Created user {customer_email} with API key: {api_key_plain}")
 
     return {"status": "success"}

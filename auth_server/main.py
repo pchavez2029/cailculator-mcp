@@ -847,6 +847,7 @@ async def create_checkout_session(tier: str):
                 'quantity': 1,
             }],
             mode='subscription',
+            allow_promotion_codes=True,  # Enable discount/promo codes
             success_url=f"{base_url}/success?session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{base_url}/?canceled=true",
             metadata={

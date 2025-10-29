@@ -1,25 +1,33 @@
 """
 Chavez Transform - A Novel Integral Transform for High-Dimensional Data
 
-This module implements the Chavez Transform, which uses zero divisor structure
+This module implements the Chavez Transform, which uses bilateral zero divisor structure
 from Cayley-Dickson algebras to transform high-dimensional data, analogous to
 how Fourier Transforms work in frequency space.
 
 Definition:
     For f in L^1(D), D subset of R^n:
 
-    C[f] = integral_D f(x) * K_Z(P,x) * Omega_d(x) dx
+    C[f] = integral_D f(x) * K_Z(P,Q,x) * Omega_d(x) dx
 
     Where:
-        K_Z(P,x) = sum_i |z_i(P)|^2 * exp(-alpha * ||x - x_i||^2)
-        z_i(P) = zero divisor components of P in P_32 (pathions)
+        K_Z(P,Q,x) = |P·x|² + |x·Q|² + |Q·x|² + |x·P|²
+        (P,Q) = bilateral zero divisor pairs from the Canonical Six
+        P × Q = 0 (bilateral zero divisor property)
         Omega_d(x) = (1 + ||x||^2)^(-d/2)
-        alpha > 0 = convergence parameter
-        x_i = zero divisor loci in P
+        alpha > 0 = convergence parameter for distance decay
+
+The Canonical Six:
+    1. (e_1 + e_14) × (e_3 + e_12) = 0
+    2. (e_3 + e_12) × (e_5 + e_10) = 0
+    3. (e_4 + e_11) × (e_6 + e_9) = 0
+    4. (e_1 - e_14) × (e_3 - e_12) = 0
+    5. (e_1 - e_14) × (e_5 + e_10) = 0
+    6. (e_2 - e_13) × (e_6 + e_9) = 0
 
 Theorems:
     1. Convergence: For bounded f in L^1(D) and alpha > 0, C[f] converges absolutely
-    2. Stability Bounds: |C[f]| <= M * ||f||_1 where M = ||P||^2 * sqrt(pi/alpha)^n
+    2. Stability Bounds: |C[f]| <= M * ||f||_1 where M = (||P||^2 + ||Q||^2) * sqrt(pi/alpha)^n
 """
 
 import numpy as np
@@ -68,42 +76,41 @@ class ChavezTransform:
         self.dimension = dimension
         self.alpha = alpha
 
-    def zero_divisor_kernel(self, P: Pathion, x: np.ndarray,
-                           zero_divisor_loci: Optional[np.ndarray] = None) -> float:
+    def zero_divisor_kernel(self, P: Pathion, Q: Pathion, x: np.ndarray) -> float:
         """
-        Compute the zero divisor kernel K_Z(P, x).
+        Compute the bilateral zero divisor kernel K_Z(P, Q, x).
 
-        K_Z(P,x) = sum_i |z_i(P)|^2 * exp(-alpha * ||x - x_i||^2)
+        K_Z(P,Q,x) = |P·x|² + |x·Q|² + |Q·x|² + |x·P|²
+
+        Where P and Q are bilateral zero divisor pairs (P × Q = 0) from the Canonical Six.
 
         Args:
-            P: Pathion element (zero divisor)
+            P: First pathion element of zero divisor pair
+            Q: Second pathion element of zero divisor pair
             x: Point in R^n where to evaluate kernel
-            zero_divisor_loci: Array of zero divisor loci x_i (if None, uses canonical basis)
 
         Returns:
-            Kernel value at x
+            Kernel value at x with distance decay
         """
-        # Extract zero divisor components
-        z_components = np.array(P.coefficients())
+        # Convert x to Pathion
+        x_coeffs = np.zeros(32)
+        x_len = min(len(x), 32)
+        x_coeffs[:x_len] = x[:x_len]
+        x_pathion = Pathion(*x_coeffs)
 
-        # If no loci provided, use canonical basis points
-        if zero_divisor_loci is None:
-            zero_divisor_loci = np.eye(len(z_components))
+        # Four bilateral products
+        Px = P * x_pathion
+        xQ = x_pathion * Q
+        Qx = Q * x_pathion
+        xP = x_pathion * P
 
-        # Ensure x has correct dimension
-        if len(x) < len(z_components):
-            x = np.pad(x, (0, len(z_components) - len(x)), mode='constant')
-        elif len(x) > len(z_components):
-            x = x[:len(z_components)]
+        # Sum of squared magnitudes
+        kernel_value = abs(Px)**2 + abs(xQ)**2 + abs(Qx)**2 + abs(xP)**2
 
-        # Compute kernel sum
-        kernel_value = 0.0
-        for i, (z_i, x_i) in enumerate(zip(z_components, zero_divisor_loci)):
-            magnitude_sq = np.abs(z_i) ** 2
-            distance_sq = np.linalg.norm(x - x_i) ** 2
-            kernel_value += magnitude_sq * np.exp(-self.alpha * distance_sq)
+        # Distance decay
+        distance_decay = np.exp(-self.alpha * np.linalg.norm(x)**2)
 
-        return kernel_value
+        return kernel_value * distance_decay
 
     def dimensional_weighting(self, x: np.ndarray, d: int) -> float:
         """
@@ -121,53 +128,50 @@ class ChavezTransform:
         norm_sq = np.linalg.norm(x) ** 2
         return (1.0 + norm_sq) ** (-d / 2.0)
 
-    def integrand(self, x: np.ndarray, f: Callable, P: Pathion, d: int,
-                  zero_divisor_loci: Optional[np.ndarray] = None) -> float:
+    def integrand(self, x: np.ndarray, f: Callable, P: Pathion, Q: Pathion, d: int) -> float:
         """
-        Compute the integrand f(x) * K_Z(P,x) * Omega_d(x).
+        Compute the integrand f(x) * K_Z(P,Q,x) * Omega_d(x).
 
         Args:
             x: Point in R^n
             f: Function to transform
-            P: Zero divisor pathion
+            P: First pathion of zero divisor pair
+            Q: Second pathion of zero divisor pair
             d: Dimension parameter for weighting
-            zero_divisor_loci: Zero divisor loci
 
         Returns:
             Integrand value at x
         """
         f_val = f(x)
-        kernel_val = self.zero_divisor_kernel(P, x, zero_divisor_loci)
+        kernel_val = self.zero_divisor_kernel(P, Q, x)
         weight_val = self.dimensional_weighting(x, d)
 
         return f_val * kernel_val * weight_val
 
-    def transform_1d(self, f: Callable, P: Pathion, d: int,
-                     domain: Tuple[float, float] = (-5.0, 5.0),
-                     zero_divisor_loci: Optional[np.ndarray] = None) -> float:
+    def transform_1d(self, f: Callable, P: Pathion, Q: Pathion, d: int,
+                     domain: Tuple[float, float] = (-5.0, 5.0)) -> float:
         """
         Compute the Chavez Transform in 1D using numerical integration.
 
         Args:
             f: Function to transform (callable taking 1D array)
-            P: Zero divisor pathion
+            P: First pathion of zero divisor pair
+            Q: Second pathion of zero divisor pair
             d: Dimension parameter
             domain: Integration domain (a, b)
-            zero_divisor_loci: Zero divisor loci
 
         Returns:
             Transform value C[f]
         """
         def integrand_1d(x_scalar):
             x = np.array([x_scalar])
-            return self.integrand(x, f, P, d, zero_divisor_loci)
+            return self.integrand(x, f, P, Q, d)
 
         result, error = integrate.quad(integrand_1d, domain[0], domain[1])
         return result
 
-    def transform_nd(self, f: Callable, P: Pathion, d: int,
+    def transform_nd(self, f: Callable, P: Pathion, Q: Pathion, d: int,
                      domain_ranges: List[Tuple[float, float]],
-                     zero_divisor_loci: Optional[np.ndarray] = None,
                      method: str = 'monte_carlo',
                      num_samples: int = 10000) -> float:
         """
@@ -175,10 +179,10 @@ class ChavezTransform:
 
         Args:
             f: Function to transform (callable taking ND array)
-            P: Zero divisor pathion
+            P: First pathion of zero divisor pair
+            Q: Second pathion of zero divisor pair
             d: Dimension parameter
             domain_ranges: List of (min, max) for each dimension
-            zero_divisor_loci: Zero divisor loci
             method: Integration method ('monte_carlo' or 'grid')
             num_samples: Number of samples for Monte Carlo
 
@@ -198,7 +202,7 @@ class ChavezTransform:
             volume = np.prod([r[1] - r[0] for r in domain_ranges])
 
             integrand_values = np.array([
-                self.integrand(x, f, P, d, zero_divisor_loci)
+                self.integrand(x, f, P, Q, d)
                 for x in samples
             ])
 
@@ -217,7 +221,7 @@ class ChavezTransform:
 
             # Evaluate integrand
             integrand_values = np.array([
-                self.integrand(x, f, P, d, zero_divisor_loci)
+                self.integrand(x, f, P, Q, d)
                 for x in points
             ])
 
@@ -230,7 +234,7 @@ class ChavezTransform:
 
         return result
 
-    def verify_convergence_theorem(self, f: Callable, P: Pathion, d: int,
+    def verify_convergence_theorem(self, f: Callable, P: Pathion, Q: Pathion, d: int,
                                    domain: Tuple[float, float] = (-5.0, 5.0),
                                    num_trials: int = 10) -> dict:
         """
@@ -240,7 +244,8 @@ class ChavezTransform:
 
         Args:
             f: Test function
-            P: Zero divisor pathion
+            P: First pathion of zero divisor pair
+            Q: Second pathion of zero divisor pair
             d: Dimension parameter
             domain: Integration domain
             num_trials: Number of different alpha values to test
@@ -257,7 +262,7 @@ class ChavezTransform:
             self.alpha = alpha_test
 
             try:
-                transform_value = self.transform_1d(f, P, d, domain)
+                transform_value = self.transform_1d(f, P, Q, d, domain)
                 converged = np.isfinite(transform_value)
                 results.append({
                     'alpha': alpha_test,
@@ -283,7 +288,7 @@ class ChavezTransform:
             'results': results
         }
 
-    def verify_stability_bounds(self, f: Callable, P: Pathion, d: int,
+    def verify_stability_bounds(self, f: Callable, P: Pathion, Q: Pathion, d: int,
                                domain: Tuple[float, float] = (-5.0, 5.0),
                                num_trials: int = 10) -> dict:
         """
@@ -293,7 +298,8 @@ class ChavezTransform:
 
         Args:
             f: Test function
-            P: Zero divisor pathion
+            P: First pathion of zero divisor pair
+            Q: Second pathion of zero divisor pair
             d: Dimension parameter
             domain: Integration domain
             num_trials: Number of tests with different functions
@@ -304,7 +310,8 @@ class ChavezTransform:
         # Compute M (stability constant)
         n = 1  # For 1D test
         P_norm = abs(P)
-        M = (P_norm ** 2) * ((np.pi / self.alpha) ** (n / 2))
+        Q_norm = abs(Q)
+        M = (P_norm ** 2 + Q_norm ** 2) * ((np.pi / self.alpha) ** (n / 2))
 
         # Compute L1 norm of f
         def abs_f(x_scalar):
@@ -314,7 +321,7 @@ class ChavezTransform:
         f_L1_norm, _ = integrate.quad(abs_f, domain[0], domain[1])
 
         # Compute transform
-        transform_value = self.transform_1d(f, P, d, domain)
+        transform_value = self.transform_1d(f, P, Q, d, domain)
 
         # Check bound
         bound = M * f_L1_norm
@@ -331,43 +338,167 @@ class ChavezTransform:
             'bound_satisfied': satisfied,
             'ratio': ratio,
             'alpha': self.alpha,
-            'P_norm': P_norm
+            'P_norm': P_norm,
+            'Q_norm': Q_norm
+        }
+
+    def canonical_six_analysis(self, f: Callable, d: int,
+                              domain: Tuple[float, float] = (-5.0, 5.0)) -> dict:
+        """
+        Complete Canonical Six Analysis across all bilateral zero-divisor loci.
+
+        Applies the transform using all six Canonical Six patterns and returns
+        a comprehensive analysis showing which loci interact most strongly with
+        the data.
+
+        Args:
+            f: Function to transform (callable taking array)
+            d: Dimension parameter for weighting
+            domain: Integration domain (a, b)
+
+        Returns:
+            Dictionary containing:
+            - 'locus_1' through 'locus_6': Transform values for each pattern
+            - 'dominant_locus': Which locus had strongest response (1-6)
+            - 'mean_response': Mean across all six loci
+            - 'std_response': Standard deviation across loci
+            - 'dimension': Pathion dimension used
+        """
+        results = {}
+
+        # Apply transform with each of the six patterns
+        for locus_id in range(1, 7):
+            P, Q = create_canonical_six_pattern(locus_id)
+            results[f'locus_{locus_id}'] = self.transform_1d(f, P, Q, d, domain)
+
+        # Compute statistics
+        values = [results[f'locus_{i}'] for i in range(1, 7)]
+        results['dominant_locus'] = max(range(1, 7), key=lambda i: abs(results[f'locus_{i}']))
+        results['mean_response'] = np.mean(values)
+        results['std_response'] = np.std(values)
+        results['dimension'] = self.dimension
+
+        return results
+
+    def transform_auto(self, f: Callable, d: int,
+                      domain: Tuple[float, float] = (-5.0, 5.0)) -> dict:
+        """
+        Auto-select best locus from Canonical Six with interestingness detection.
+
+        Internally runs all six patterns, returns result from the dominant one,
+        plus metadata about the analysis including whether the results show
+        interesting patterns that warrant deeper investigation.
+
+        Args:
+            f: Function to transform (callable taking array)
+            d: Dimension parameter for weighting
+            domain: Integration domain (a, b)
+
+        Returns:
+            Dictionary containing:
+            - 'value': Transform value from dominant locus
+            - 'dominant_locus': Which locus was strongest (1-6)
+            - 'locus_values': All six locus values for transparency
+            - 'mean_response': Mean across all loci
+            - 'std_response': Standard deviation across loci
+            - 'interesting': Boolean flag - true if patterns warrant attention
+            - 'interestingness_reason': Why it's interesting (if applicable)
+            - 'suggest_full_analysis': Recommendation to run full analysis
+            - 'coefficient_of_variation': CV = std/mean
+            - 'dominance_ratio': How much stronger dominant locus is vs mean
+            - 'dimension': Pathion dimension used
+        """
+        # Run full analysis internally
+        analysis = self.canonical_six_analysis(f, d, domain)
+
+        dominant = analysis['dominant_locus']
+        dominant_value = analysis[f'locus_{dominant}']
+        mean = analysis['mean_response']
+        std = analysis['std_response']
+
+        # Calculate interestingness metrics
+        cv = std / abs(mean) if abs(mean) > 1e-10 else 0.0
+        dominance_ratio = abs(dominant_value) / abs(mean) if abs(mean) > 1e-10 else 1.0
+
+        # Check if all loci are responding (multi-modal)
+        all_active = all(abs(analysis[f'locus_{i}']) > 1e-3 for i in range(1, 7))
+
+        # Detect interesting patterns
+        interesting = False
+        reason = None
+
+        if cv > 0.5:  # High variance - different loci responding very differently
+            interesting = True
+            reason = "high_variance"
+        elif dominance_ratio > 2.0:  # One locus much stronger than others
+            interesting = True
+            reason = "strong_dominance"
+        elif all_active:  # All loci active - complex structure
+            interesting = True
+            reason = "multi_modal"
+
+        return {
+            'value': dominant_value,
+            'dominant_locus': dominant,
+            'locus_values': {f'locus_{i}': analysis[f'locus_{i}'] for i in range(1, 7)},
+            'mean_response': mean,
+            'std_response': std,
+            'interesting': interesting,
+            'interestingness_reason': reason,
+            'suggest_full_analysis': interesting,
+            'coefficient_of_variation': cv,
+            'dominance_ratio': dominance_ratio,
+            'dimension': analysis['dimension']
         }
 
 
-def create_canonical_six_pathion(pattern_id: int = 1) -> Pathion:
+def create_canonical_six_pattern(pattern_id: int) -> Tuple[Pathion, Pathion]:
     """
-    Create a Pathion corresponding to one of the Canonical Six patterns.
+    Create a Pathion pair corresponding to one of the Canonical Six zero divisor patterns.
+
+    The Canonical Six are the fundamental bilateral zero divisor pairs in sedenions (16D):
+    1. (e_1 + e_14) × (e_3 + e_12) = 0
+    2. (e_3 + e_12) × (e_5 + e_10) = 0
+    3. (e_4 + e_11) × (e_6 + e_9) = 0
+    4. (e_1 - e_14) × (e_3 - e_12) = 0
+    5. (e_1 - e_14) × (e_5 + e_10) = 0
+    6. (e_2 - e_13) × (e_6 + e_9) = 0
 
     Args:
         pattern_id: Which canonical pattern to use (1-6)
 
     Returns:
-        Pathion zero divisor
+        Tuple of (P, Q) where P × Q = 0
     """
-    # Canonical Six patterns in 16D (sedenions), embedded in 32D
-    # Pattern structure: (e_a + e_b) where a+b = 15
-
+    # Canonical Six patterns: ((a, b, sign_P), (c, d, sign_Q))
+    # sign: +1 for addition, -1 for subtraction
     patterns = {
-        1: (1, 14),   # e_1 + e_14
-        2: (2, 13),   # e_2 + e_13
-        3: (3, 12),   # e_3 + e_12
-        4: (4, 11),   # e_4 + e_11
-        5: (5, 10),   # e_5 + e_10
-        6: (6, 9),    # e_6 + e_9
+        1: ((1, 14, +1), (3, 12, +1)),   # (e_1 + e_14) × (e_3 + e_12) = 0
+        2: ((3, 12, +1), (5, 10, +1)),   # (e_3 + e_12) × (e_5 + e_10) = 0
+        3: ((4, 11, +1), (6, 9, +1)),    # (e_4 + e_11) × (e_6 + e_9) = 0
+        4: ((1, 14, -1), (3, 12, -1)),   # (e_1 - e_14) × (e_3 - e_12) = 0
+        5: ((1, 14, -1), (5, 10, +1)),   # (e_1 - e_14) × (e_5 + e_10) = 0
+        6: ((2, 13, -1), (6, 9, +1)),    # (e_2 - e_13) × (e_6 + e_9) = 0
     }
 
     if pattern_id not in patterns:
         raise ValueError(f"pattern_id must be 1-6, got {pattern_id}")
 
-    a, b = patterns[pattern_id]
+    (a, b, sign_P), (c, d, sign_Q) = patterns[pattern_id]
 
-    # Create pathion with 1.0 in positions a and b
-    coeffs = [0.0] * 32
-    coeffs[a] = 1.0
-    coeffs[b] = 1.0
+    # Create first pathion P = e_a ± e_b
+    coeffs_P = [0.0] * 32
+    coeffs_P[a] = 1.0
+    coeffs_P[b] = float(sign_P)
+    P = Pathion(*coeffs_P)
 
-    return Pathion(*coeffs)
+    # Create second pathion Q = e_c ± e_d
+    coeffs_Q = [0.0] * 32
+    coeffs_Q[c] = 1.0
+    coeffs_Q[d] = float(sign_Q)
+    Q = Pathion(*coeffs_Q)
+
+    return P, Q
 
 
 def test_functions():
@@ -388,102 +519,67 @@ def test_functions():
 
 if __name__ == "__main__":
     print("="*80)
-    print("CHAVEZ TRANSFORM - IMPLEMENTATION AND VERIFICATION")
+    print("CHAVEZ TRANSFORM - CANONICAL SIX IMPLEMENTATION")
     print("="*80)
     print()
 
-    # Initialize transform
-    print("Initializing Chavez Transform...")
-    alpha = 1.0
-    dimension = 32
-    ct = ChavezTransform(dimension=dimension, alpha=alpha)
-    print(f"  Dimension: {dimension}")
-    print(f"  Alpha: {alpha}")
+    # Initialize
+    ct = ChavezTransform(dimension=32, alpha=1.0)
+    f_test = lambda x: np.exp(-np.linalg.norm(x)**2)
+    d = 2
+    domain = (-3.0, 3.0)
+
+    print("Initialized Chavez Transform")
+    print(f"  Dimension: {ct.dimension}")
+    print(f"  Alpha: {ct.alpha}")
     print()
 
-    # Create Canonical Six pathion
-    print("Creating Canonical Six pathion (Pattern 1: e_1 + e_14)...")
-    P = create_canonical_six_pathion(pattern_id=1)
-    print(f"  P norm: {abs(P):.6f}")
-    print(f"  Non-zero components: {np.sum(np.abs(np.array(P.coefficients())) > 1e-10)}")
-    print()
-
-    # Load test functions
+    # Test that zero divisor pairs work correctly
     print("="*80)
-    print("TEST FUNCTION SUITE")
+    print("PART 1: CANONICAL SIX VERIFICATION")
     print("="*80)
     print()
 
-    test_funcs = test_functions()
-
-    for name, f in test_funcs.items():
-        print(f"Testing with {name} function...")
-
-        # Compute transform
-        d = 2  # Dimension parameter for weighting
-        domain = (-3.0, 3.0)
-
-        try:
-            transform_value = ct.transform_1d(f, P, d, domain)
-            print(f"  C[{name}] = {transform_value:.6e}")
-        except Exception as e:
-            print(f"  Error: {e}")
-
-        print()
-
-    # Verify Theorem 1: Convergence
-    print("="*80)
-    print("THEOREM 1: CONVERGENCE VERIFICATION")
-    print("="*80)
-    print()
-
-    f_test = test_funcs['gaussian']
-    convergence_results = ct.verify_convergence_theorem(f_test, P, d=2, num_trials=10)
-
-    print(f"Convergence rate: {convergence_results['convergence_rate']*100:.1f}%")
-    print(f"All tests converged: {convergence_results['all_converged']}")
-    print()
-    print("Alpha values tested:")
-    for r in convergence_results['results']:
-        status = "CONVERGED" if r['converged'] else "FAILED"
-        print(f"  alpha={r['alpha']:.3f}: C[f]={r.get('value', 'N/A'):.6e} [{status}]")
-    print()
-
-    # Verify Theorem 2: Stability Bounds
-    print("="*80)
-    print("THEOREM 2: STABILITY BOUNDS VERIFICATION")
-    print("="*80)
-    print()
-
-    stability_results = ct.verify_stability_bounds(f_test, P, d=2)
-
-    print(f"Transform value: |C[f]| = {np.abs(stability_results['transform_value']):.6e}")
-    print(f"Stability constant M: {stability_results['stability_constant_M']:.6e}")
-    print(f"||f||_1: {stability_results['f_L1_norm']:.6e}")
-    print(f"Theoretical bound: M * ||f||_1 = {stability_results['theoretical_bound']:.6e}")
-    print(f"Bound satisfied: {stability_results['bound_satisfied']}")
-    print(f"Ratio |C[f]| / bound: {stability_results['ratio']:.6f}")
-    print()
-
-    if stability_results['bound_satisfied']:
-        print("SUCCESS: Stability bound is satisfied!")
-    else:
-        print("WARNING: Stability bound violated!")
-
-    print()
-
-    # Test all Canonical Six patterns
-    print("="*80)
-    print("CANONICAL SIX PATTERNS - TRANSFORM VALUES")
-    print("="*80)
-    print()
-
+    print("Verifying bilateral zero divisor properties:")
     for pattern_id in range(1, 7):
-        P_pattern = create_canonical_six_pathion(pattern_id)
-        transform_val = ct.transform_1d(test_funcs['gaussian'], P_pattern, d=2)
-        print(f"Pattern {pattern_id}: C[gaussian] = {transform_val:.6e}")
+        P, Q = create_canonical_six_pattern(pattern_id)
+        product_norm = abs(P * Q)
+        status = "OK" if product_norm < 1e-10 else "FAILED"
+        print(f"  Pattern {pattern_id}: ||P x Q|| = {product_norm:.6e} [{status}]")
+    print()
+
+    print("="*80)
+    print("PART 2: CANONICAL SIX ANALYSIS (Full)")
+    print("="*80)
+    print()
+
+    full_analysis = ct.canonical_six_analysis(f_test, d, domain)
+
+    print("Complete locus analysis:")
+    for i in range(1, 7):
+        print(f"  Locus {i}: {full_analysis[f'locus_{i}']:.6e}")
+    print(f"\nDominant locus: {full_analysis['dominant_locus']}")
+    print(f"Mean response: {full_analysis['mean_response']:.6e}")
+    print(f"Std response: {full_analysis['std_response']:.6e}")
+    print()
+
+    print("="*80)
+    print("PART 3: TRANSFORM AUTO (Smart Default)")
+    print("="*80)
+    print()
+
+    auto_result = ct.transform_auto(f_test, d, domain)
+
+    print(f"Auto-selected result: {auto_result['value']:.6e}")
+    print(f"Dominant locus: {auto_result['dominant_locus']}")
+    print(f"Coefficient of variation: {auto_result['coefficient_of_variation']:.3f}")
+    print(f"Dominance ratio: {auto_result['dominance_ratio']:.2f}")
+    print(f"\nInteresting: {auto_result['interesting']}")
+    if auto_result['interesting']:
+        print(f"Reason: {auto_result['interestingness_reason']}")
+        print(f"Suggest full analysis: {auto_result['suggest_full_analysis']}")
 
     print()
     print("="*80)
-    print("CHAVEZ TRANSFORM IMPLEMENTATION COMPLETE")
+    print("IMPLEMENTATION COMPLETE")
     print("="*80)

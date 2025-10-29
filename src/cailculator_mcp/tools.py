@@ -25,10 +25,10 @@ def _get_numpy():
 def _get_transforms():
     global _transforms_module
     if _transforms_module is None:
-        from .transforms import ChavezTransform, create_canonical_six_pathion, Pathion
+        from .transforms import ChavezTransform, create_canonical_six_pattern, Pathion
         _transforms_module = type('obj', (object,), {
             'ChavezTransform': ChavezTransform,
-            'create_canonical_six_pathion': create_canonical_six_pathion,
+            'create_canonical_six_pattern': create_canonical_six_pattern,
             'Pathion': Pathion
         })
     return _transforms_module
@@ -53,8 +53,12 @@ def _get_hypercomplex():
 def _get_clifford():
     global _clifford_module
     if _clifford_module is None:
-        from .clifford_algebras import create_clifford_algebra
-        _clifford_module = type('obj', (object,), {'create_clifford_algebra': create_clifford_algebra})
+        from .clifford_verified import CliffordElement, verify_zero_divisor_pattern, create_clifford_algebra
+        _clifford_module = type('obj', (object,), {
+            'CliffordElement': CliffordElement,
+            'verify_zero_divisor_pattern': verify_zero_divisor_pattern,
+            'create_clifford_algebra': create_clifford_algebra
+        })
     return _clifford_module
 
 logger = logging.getLogger(__name__)
@@ -633,30 +637,61 @@ async def _compute_canonical_six_pattern(framework: str, dimension: int, pattern
     """
     try:
         if framework == "clifford":
-            # Create Clifford algebra with auto-selected signature
-            clifford = _get_clifford()
-            cliff = clifford.create_clifford_algebra(dimension=dimension)
-
-            # Get pattern
-            P, Q = cliff.canonical_six_clifford(pattern_id)
-            product = cliff.geometric_product(P, Q)
-            is_zero = cliff.is_zero_divisor_clifford(P, Q)
-
+            # Use VERIFIED CliffordElement implementation (Beta v7+)
             import math
+            np = _get_numpy()
+            clifford = _get_clifford()
+
             n = int(math.log2(dimension))
+
+            # Canonical Six index mappings
+            index_map = {
+                1: (1, 10, 4, 15),
+                2: (1, 10, 5, 14),
+                3: (1, 10, 6, 13),
+                4: (4, 11, 1, 14),
+                5: (5, 10, 1, 14),
+                6: (6, 9, 6, 9)
+            }
+
+            a, b, c, d = index_map[pattern_id]
+
+            # Create P = e_a + e_b using verified CliffordElement
+            p_coeffs = np.zeros(dimension)
+            p_coeffs[a] = 1.0
+            p_coeffs[b] = 1.0
+            P = clifford.CliffordElement(n=n, coeffs=p_coeffs)
+
+            # Create Q = e_c - e_d
+            q_coeffs = np.zeros(dimension)
+            q_coeffs[c] = 1.0
+            q_coeffs[d] = -1.0
+            Q = clifford.CliffordElement(n=n, coeffs=q_coeffs)
+
+            # Compute product using verified geometric product
+            product = P * Q
+
+            # Check if zero divisor
+            product_norm = abs(product)
+            p_norm = abs(P)
+            q_norm = abs(Q)
+            is_zero = product_norm < 1e-10 and p_norm > 1e-10 and q_norm > 1e-10
 
             result = {
                 "success": True,
                 "framework": "clifford",
                 "clifford_signature": f"Cl({n},0,0)",
+                "implementation": "verified (Beta v7+)",
                 "operation": "canonical_six_pattern",
                 "pattern_id": int(pattern_id),
                 "dimension": int(dimension),
-                "P": str(P),
-                "Q": str(Q),
+                "P": f"e_{a} + e_{b}",
+                "Q": f"e_{c} - e_{d}",
                 "product": str(product),
                 "is_zero_divisor": bool(is_zero),
-                "product_norm": float(abs(product)),
+                "product_norm": float(product_norm),
+                "P_norm": float(p_norm),
+                "Q_norm": float(q_norm),
                 "interpretation": (
                     f"Pattern {pattern_id} in Clifford algebra Cl({n},0,0): " +
                     ("Zero divisor confirmed!" if is_zero else "Not a zero divisor in this signature")
@@ -797,7 +832,7 @@ async def chavez_transform(arguments: Dict[str, Any]) -> Dict[str, Any]:
         # Create transform and pathion
         transforms = _get_transforms()
         ct = transforms.ChavezTransform(dimension=32, alpha=alpha)
-        P = transforms.create_canonical_six_pathion(pattern_id)
+        P, Q = transforms.create_canonical_six_pattern(pattern_id)
         
         # Define function from data (interpolation or direct evaluation)
         if len(data_array) == 1:
@@ -817,36 +852,22 @@ async def chavez_transform(arguments: Dict[str, Any]) -> Dict[str, Any]:
         
         # Compute transform
         domain = (-5.0, 5.0)
-        transform_value = ct.transform_1d(f, P, dimension_param, domain)
-        
-        # Verify convergence
-        convergence_results = ct.verify_convergence_theorem(
-            f, P, dimension_param, domain, num_trials=5
-        )
-        
-        # Verify stability
-        stability_results = ct.verify_stability_bounds(
-            f, P, dimension_param, domain
-        )
-        
+        transform_value = ct.transform_1d(f, P, Q, dimension_param, domain)
+
+        # NOTE: Convergence and stability verification disabled for performance
+        # Each verification adds ~5 minutes of computation time
+        # These should only be run in testing/validation contexts
+
         return {
             "success": True,
             "transform_value": float(transform_value),
             "pattern_id": int(pattern_id),
             "alpha": float(alpha),
-            "convergence": {
-                "rate": float(convergence_results["convergence_rate"]),
-                "all_converged": bool(convergence_results["all_converged"])
-            },
-            "stability": {
-                "bound_satisfied": bool(stability_results["bound_satisfied"]),
-                "ratio": float(stability_results["ratio"]),
-                "theoretical_bound": float(stability_results["theoretical_bound"])
-            },
             "metadata": {
                 "data_points": int(len(data_array)),
                 "dimension_param": int(dimension_param),
-                "domain": list(domain)
+                "domain": list(domain),
+                "note": "Verification skipped for performance (transform takes ~30-60 seconds)"
             }
         }
         
@@ -1322,8 +1343,8 @@ async def _create_canonical_six_plot(data: Dict, output_dir: str, timestamp: str
             transform_values = []
 
             for pattern_id in range(1, 7):
-                P = transforms.create_canonical_six_pathion(pattern_id)
-                val = ct.transform_1d(f, P, d=2, domain=(-5.0, 5.0))
+                P, Q = transforms.create_canonical_six_pattern(pattern_id)
+                val = ct.transform_1d(f, P, Q, d=2, domain=(-5.0, 5.0))
                 transform_values.append(abs(val))
 
         # Create bar plot
@@ -1428,11 +1449,11 @@ async def _create_alpha_plot(data: Dict, output_dir: str, timestamp: str,
         alpha_values = np.logspace(-1, 1, 20)  # 0.1 to 10
         transform_values = []
 
-        P = transforms.create_canonical_six_pathion(pattern_id)
+        P, Q = transforms.create_canonical_six_pattern(pattern_id)
 
         for alpha in alpha_values:
             ct = transforms.ChavezTransform(dimension=32, alpha=alpha)
-            val = ct.transform_1d(f, P, d=2, domain=(-5.0, 5.0))
+            val = ct.transform_1d(f, P, Q, d=2, domain=(-5.0, 5.0))
             transform_values.append(abs(val))
 
         # Create plot
@@ -1685,8 +1706,8 @@ async def _create_pattern_comparison(data: Dict, output_dir: str, timestamp: str
                     return result
 
                 ct = transforms.ChavezTransform(dimension=32, alpha=1.0)
-                P_pathion = transforms.create_canonical_six_pathion(pid)
-                transform_val = ct.transform_1d(f, P_pathion, d=2, domain=(-5.0, 5.0))
+                P_pathion, Q_pathion = transforms.create_canonical_six_pattern(pid)
+                transform_val = ct.transform_1d(f, P_pathion, Q_pathion, d=2, domain=(-5.0, 5.0))
                 results['transform_values'].append(float(abs(transform_val)))
 
         # Create comparison visualization with 2 subplots

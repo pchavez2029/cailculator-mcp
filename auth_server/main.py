@@ -52,11 +52,11 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
 # Stripe Price IDs (LIVE MODE - Production)
+# TODO: Update these with new Stripe price IDs after creation
 STRIPE_PRICES = {
-    "indie": "price_1SMvzF2NNm10BnLCEPbug1yj",        # $19/month - 5,000 requests
-    "academic": "price_1SMvz42NNm10BnLCM3HNLmg0",     # $99/month - 25,000 requests
-    "professional": "price_1SMvyr2NNm10BnLCJowLJz7d"  # $299/month - 100,000 requests
-    # Free tier doesn't need Stripe
+    "individual": "price_PLACEHOLDER_INDIVIDUAL",      # $79.99/month - 25,000 requests
+    "academic": "price_PLACEHOLDER_ACADEMIC",          # $199/month - 75,000 requests
+    "commercial": "price_PLACEHOLDER_COMMERCIAL"       # $299/month per seat - 250,000 requests
     # Enterprise is custom pricing (contact sales)
 }
 
@@ -124,11 +124,10 @@ class UsageRequest(BaseModel):
 # =============================================================================
 
 TIER_LIMITS = {
-    "free": 100,            # $0/month - 100 requests
-    "indie": 5_000,         # $19/month - 5,000 requests
-    "academic": 25_000,     # $99/month - 25,000 requests
-    "professional": 100_000,# $299/month - 100,000 requests
-    "enterprise": -1        # Custom pricing - Unlimited
+    "individual": 25_000,       # $79.99/month - 25,000 requests
+    "academic": 75_000,         # $199/month - 75,000 requests
+    "commercial": 250_000,      # $299/month per seat - 250,000 requests
+    "enterprise": -1            # Custom pricing - Unlimited
 }
 
 # =============================================================================
@@ -268,10 +267,9 @@ def send_api_key_email(email: str, api_key: str, tier: str) -> bool:
         return False
 
     tier_info = {
-        "free": {"limit": "100 requests/month", "price": "Free"},
-        "indie": {"limit": "5,000 requests/month", "price": "$19/month"},
-        "academic": {"limit": "25,000 requests/month", "price": "$99/month"},
-        "professional": {"limit": "100,000 requests/month", "price": "$299/month"},
+        "individual": {"limit": "25,000 requests/month", "price": "$79.99/month"},
+        "academic": {"limit": "75,000 requests/month", "price": "$199/month"},
+        "commercial": {"limit": "250,000 requests/month per seat", "price": "$299/month per seat"},
         "enterprise": {"limit": "Unlimited", "price": "Custom pricing"}
     }
 
@@ -548,12 +546,13 @@ async def signup(signup_request: SignupRequest, request: Request, db: Session = 
         "email_sent": email_sent
     }
 
-@app.get("/signup-free", response_class=HTMLResponse)
-async def signup_free_page(request: Request):
-    """
-    Free tier signup page (simple email form)
-    """
-    return templates.TemplateResponse("signup_free.html", {"request": request})
+# Free tier removed - all tiers now require payment
+# @app.get("/signup-free", response_class=HTMLResponse)
+# async def signup_free_page(request: Request):
+#     """
+#     Free tier signup page (simple email form) - DEPRECATED
+#     """
+#     return templates.TemplateResponse("signup_free.html", {"request": request})
 
 @app.get("/verify-email", response_class=HTMLResponse)
 async def verify_email(request: Request, token: str, db: Session = Depends(get_db)):

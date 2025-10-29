@@ -209,6 +209,42 @@
             text-decoration: underline;
         }
 
+        .student-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px 40px;
+            margin-top: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .student-section h3 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+        }
+
+        .student-section p {
+            color: #555;
+            font-size: 1.1em;
+            margin: 15px 0;
+        }
+
+        .student-section code {
+            background: #f0f0f0;
+            padding: 5px 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #764ba2;
+            font-size: 1.2em;
+        }
+
+        .student-section a {
+            color: #667eea;
+            text-decoration: underline;
+        }
+
         .tech-info {
             background: rgba(255,255,255,0.1);
             border-radius: 12px;
@@ -269,55 +305,46 @@
             <h2>Choose Your Plan</h2>
             <div class="pricing-grid">
                 <div class="pricing-card">
-                    <h3>Free</h3>
-                    <div class="price">$0<span class="price-period">/month</span></div>
-                    <div class="requests">100 requests/month</div>
+                    <h3>Individual</h3>
+                    <div class="price">$79.99<span class="price-period">/month</span></div>
+                    <div class="requests">25,000 requests/month</div>
                     <ul class="features-list">
                         <li>Zero divisor detection</li>
                         <li>Pattern analysis</li>
                         <li>Chavez Transform</li>
-                        <li>1 API key</li>
-                    </ul>
-                    <button class="subscribe-btn" onclick="subscribeFree()">Get Started Free</button>
-                </div>
-
-                <div class="pricing-card">
-                    <h3>Indie</h3>
-                    <div class="price">$19<span class="price-period">/month</span></div>
-                    <div class="requests">5,000 requests/month</div>
-                    <ul class="features-list">
-                        <li>Everything in Free</li>
                         <li>Advanced visualizations</li>
                         <li>E8 lattice analysis</li>
                         <li>Email support</li>
                     </ul>
-                    <button class="subscribe-btn" onclick="subscribe('indie')">Subscribe</button>
+                    <button class="subscribe-btn" onclick="subscribe('individual')">Subscribe</button>
                 </div>
 
-                <div class="pricing-card">
+                <div class="pricing-card featured">
                     <h3>Academic</h3>
-                    <div class="price">$99<span class="price-period">/month</span></div>
-                    <div class="requests">25,000 requests/month</div>
+                    <div class="price">$199<span class="price-period">/month</span></div>
+                    <div class="requests">75,000 requests/month</div>
                     <ul class="features-list">
-                        <li>Everything in Indie</li>
+                        <li>Everything in Individual</li>
                         <li>Priority support</li>
                         <li>Research collaboration</li>
                         <li>Citation assistance</li>
+                        <li>Classroom use</li>
                     </ul>
                     <button class="subscribe-btn" onclick="subscribe('academic')">Subscribe</button>
                 </div>
 
                 <div class="pricing-card">
-                    <h3>Professional</h3>
-                    <div class="price">$299<span class="price-period">/month</span></div>
-                    <div class="requests">100,000 requests/month</div>
+                    <h3>Commercial</h3>
+                    <div class="price">$299<span class="price-period">/month per seat</span></div>
+                    <div class="requests">250,000 requests/month</div>
                     <ul class="features-list">
                         <li>Everything in Academic</li>
                         <li>Dedicated support</li>
                         <li>Custom integrations</li>
                         <li>Usage analytics</li>
+                        <li>Team management</li>
                     </ul>
-                    <button class="subscribe-btn" onclick="subscribe('professional')">Subscribe</button>
+                    <button class="subscribe-btn" onclick="subscribe('commercial')">Subscribe</button>
                 </div>
 
                 <div class="pricing-card">
@@ -332,6 +359,13 @@
                     </ul>
                     <a href="mailto:iknowpi@gmail.com" class="subscribe-btn">Contact Sales</a>
                 </div>
+            </div>
+
+            <!-- Student Discount Section -->
+            <div class="student-section">
+                <h3>Students</h3>
+                <p><strong>Current Students:</strong> Use coupon code <code>STUDENT2025</code> at checkout for substantial savings off Individual pricing.</p>
+                <p><strong>Need help?</strong> Email <a href="mailto:iknowpi@gmail.com">iknowpi@gmail.com</a> with your .edu email address.</p>
             </div>
         </div>
 
@@ -355,11 +389,6 @@
         function subscribe(tier) {
             // Redirect to Stripe checkout
             window.location.href = `/create-checkout-session?tier=${tier}`;
-        }
-
-        function subscribeFree() {
-            // Redirect to free tier signup (email only, no payment)
-            window.location.href = `/signup-free`;
         }
     </script>
 </body>

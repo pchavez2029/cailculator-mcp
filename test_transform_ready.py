@@ -6,7 +6,7 @@ Run this to verify the transform is ready for production use
 import sys
 sys.path.insert(0, 'src')
 
-from cailculator_mcp.transforms import ChavezTransform, create_canonical_six_pathion
+from cailculator_mcp.transforms import ChavezTransform, create_canonical_six_pattern
 import numpy as np
 
 print("="*60)
@@ -18,9 +18,9 @@ print()
 print("Test 1: Basic transform functionality...")
 try:
     ct = ChavezTransform(alpha=1.0)
-    P = create_canonical_six_pathion(1)
+    P, Q = create_canonical_six_pattern(1)
     f = lambda x: np.exp(-np.linalg.norm(x)**2)
-    result = ct.transform_1d(f, P, d=2)
+    result = ct.transform_1d(f, P, Q, d=2)
     print(f"  [OK] Transform executed: {result:.6e}")
     assert np.isfinite(result), "Result must be finite"
     print("  [OK] Result is finite")
@@ -33,8 +33,8 @@ print("\nTest 2: All Canonical Six patterns...")
 try:
     results = []
     for i in range(1, 7):
-        P = create_canonical_six_pathion(i)
-        r = ct.transform_1d(f, P, d=2)
+        P, Q = create_canonical_six_pattern(i)
+        r = ct.transform_1d(f, P, Q, d=2)
         results.append(r)
         print(f"  [OK] Pattern {i}: {r:.6e}")
 
@@ -69,7 +69,7 @@ try:
     }
 
     for name, func in test_funcs.items():
-        result = ct.transform_1d(func, P, d=2)
+        result = ct.transform_1d(func, P, Q, d=2)
         print(f"  [OK] {name}: {result:.6e}")
         assert np.isfinite(result), f"{name} must produce finite result"
 except Exception as e:
@@ -81,7 +81,7 @@ print("\nTest 5: Multi-dimensional transform...")
 try:
     f_2d = lambda x: np.exp(-np.linalg.norm(x)**2)
     domain_2d = [(-3, 3), (-3, 3)]
-    result_2d = ct.transform_nd(f_2d, P, d=2, domain_ranges=domain_2d,
+    result_2d = ct.transform_nd(f_2d, P, Q, d=2, domain_ranges=domain_2d,
                                 method='monte_carlo', num_samples=1000)
     print(f"  [OK] 2D transform: {result_2d:.6e}")
     assert np.isfinite(result_2d), "2D result must be finite"

@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     api_key: str = ""
 
     # Auth server endpoint
-    auth_endpoint: str = "https://cailculator-auth.railway.app/v1/auth/validate"
+    auth_endpoint: str = "https://cailculator-mcp-production.up.railway.app/validate"
 
     # Development/testing flags
     enable_dev_mode: bool = False

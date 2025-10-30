@@ -51,6 +51,22 @@ build/
 # Logs
 *.log
 
+# Development test files (keep in local only)
+test_*.py
+!tests/test_*.py
+
+# Internal planning docs
+*_CHECKLIST.md
+*_PLAN.md
+*_STATUS.md
+RELEASE_SUMMARY*.md
+
+# Local Claude settings
+.claude/settings.local.json
+
+# Internal scripts
+scripts/setup_*.py
+
 # Test-generated images (exclude from git)
 *.png
 *.jpg

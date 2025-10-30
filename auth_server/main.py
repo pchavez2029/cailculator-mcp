@@ -433,6 +433,94 @@ def check_rate_limit(api_key: str, db: Session) -> tuple[bool, int, int]:
 
     return usage_count < limit, usage_count, limit
 
+def send_api_key_email(email: str, api_key: str, tier: str, customer_name: str = None):
+    """
+    Send API key to customer via email using SendGrid
+    """
+    if not SENDGRID_API_KEY:
+        print(f"⚠️  SendGrid not configured - API key: {api_key}")
+        return
+
+    # Friendly tier names
+    tier_names = {
+        "individual": "Individual",
+        "academic": "Academic",
+        "commercial": "Commercial"
+    }
+    tier_display = tier_names.get(tier, tier.title())
+
+    # Email body
+    body = f"""
+Hello{f' {customer_name}' if customer_name else ''},
+
+Thank you for subscribing to CAILculator {tier_display}!
+
+Your API key is ready:
+
+    {api_key}
+
+To get started:
+
+1. Install Claude Desktop (if you haven't already)
+2. Add CAILculator to your MCP configuration:
+
+   Windows: %APPDATA%\\Claude\\claude_desktop_config.json
+   Mac/Linux: ~/Library/Application Support/Claude/claude_desktop_config.json
+
+3. Add this configuration:
+
+{{
+  "mcpServers": {{
+    "cailculator-mcp": {{
+      "command": "uvx",
+      "args": ["cailculator-mcp"],
+      "env": {{
+        "CAILCULATOR_API_KEY": "{api_key}"
+      }}
+    }}
+  }}
+}}
+
+4. Restart Claude Desktop
+
+Documentation: https://github.com/pchavez2029/CAILculator
+Support: iknowpi@gmail.com
+
+Features included in your {tier_display} plan:
+- All 5 MCP tools (compute, transform, patterns, analysis, visualizations)
+- Dual framework support (Cayley-Dickson + Clifford)
+- 16D-256D dimensional range
+- Chavez Transform data analysis
+- Canonical Six pattern detection
+
+Better math, less suffering.
+
+— Chavez AI Labs
+
+---
+Need help? Reply to this email or reach out at iknowpi@gmail.com
+    """.strip()
+
+    try:
+        message = Mail(
+            from_email=SENDGRID_FROM_EMAIL,
+            to_emails=email,
+            subject="Your CAILculator API Key",
+            plain_text_content=body
+        )
+
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+
+        if response.status_code in [200, 201, 202]:
+            print(f"✅ Sent API key email to {email}")
+        else:
+            print(f"⚠️  SendGrid returned status {response.status_code}")
+
+    except Exception as e:
+        print(f"❌ Failed to send email to {email}: {e}")
+        print(f"   API key (manual delivery needed): {api_key}")
+
 # =============================================================================
 # API ENDPOINTS
 # =============================================================================
@@ -909,10 +997,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 
     # Handle successful subscription creation
     if event['type'] == 'checkout.session.completed':
+        print(f"📥 Received event: checkout.session.completed")
         session = event['data']['object']
 
         # Get customer email
         customer_email = session.get('customer_email') or session.get('customer_details', {}).get('email')
+        customer_name = session.get('customer_details', {}).get('name')
+        print(f"   Customer: {customer_email} ({customer_name})")
 
         # Map price ID to tier (LIVE STRIPE PRICES - updated 2025-10-29)
         subscription_id = session.get('subscription')
@@ -922,6 +1013,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             try:
                 subscription = stripe.Subscription.retrieve(subscription_id)
                 price_id = subscription['items']['data'][0]['price']['id']
+                print(f"   Subscription ID: {subscription_id}")
+                print(f"   Price ID: {price_id}")
 
                 # Map your live price IDs to tiers
                 price_to_tier = {
@@ -931,27 +1024,45 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 }
 
                 tier = price_to_tier.get(price_id, 'individual')
+                print(f"   Mapped to tier: {tier}")
             except Exception as e:
-                print(f"Error getting subscription tier: {e}")
+                print(f"❌ Error getting subscription tier: {e}")
                 tier = 'individual'
+        else:
+            print(f"⚠️  No subscription ID in session")
 
         if customer_email:
             # Check if user already exists
             existing_user = db.query(User).filter(User.email == customer_email).first()
 
-            if not existing_user:
+            if existing_user:
+                print(f"⚠️  User already exists: {customer_email}")
+                # Generate new API key for existing user
+                api_key_plain = f"cail_{tier}_{secrets.token_urlsafe(20)}"
+                api_key_hash = hashlib.sha256(api_key_plain.encode()).hexdigest()
+
+                api_key_record = APIKey(
+                    user_id=existing_user.id,
+                    key_hash=api_key_hash
+                )
+                db.add(api_key_record)
+                db.commit()
+                print(f"✅ Generated new API key for existing user")
+            else:
                 # Create user
+                print(f"   Creating new user...")
                 user = User(
                     email=customer_email,
-                    name=customer_email.split('@')[0],
+                    name=customer_name or customer_email.split('@')[0],
                     tier=SubscriptionTier(tier)
                 )
                 db.add(user)
                 db.commit()
                 db.refresh(user)
+                print(f"✅ Created user: {customer_email}")
 
                 # Generate API key
-                api_key_plain = f"cail_{secrets.token_urlsafe(32)}"
+                api_key_plain = f"cail_{tier}_{secrets.token_urlsafe(20)}"
                 api_key_hash = hashlib.sha256(api_key_plain.encode()).hexdigest()
 
                 api_key_record = APIKey(
@@ -960,10 +1071,12 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 )
                 db.add(api_key_record)
                 db.commit()
+                print(f"✅ Generated API key")
 
-                # Send API key via email
-                send_api_key_email(customer_email, api_key_plain, tier)
-                print(f"Created user {customer_email} with API key: {api_key_plain}")
+            # Send API key via email (for both new and existing users)
+            print(f"   Sending email to {customer_email}...")
+            send_api_key_email(customer_email, api_key_plain, tier, customer_name)
+            print(f"✅ Complete! API key: {api_key_plain[:25]}...")
 
     return {"status": "success"}
 

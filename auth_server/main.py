@@ -52,11 +52,10 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
 # Stripe Price IDs (LIVE MODE - Production)
-# TODO: Update these with new Stripe price IDs after creation
 STRIPE_PRICES = {
-    "individual": "price_PLACEHOLDER_INDIVIDUAL",      # $79.99/month - 25,000 requests
-    "academic": "price_PLACEHOLDER_ACADEMIC",          # $199/month - 75,000 requests
-    "commercial": "price_PLACEHOLDER_COMMERCIAL"       # $299/month per seat - 250,000 requests
+    "individual": "price_1SNlPU2NNm10BnLC1ufwG07s",    # $79.99/month - 25,000 requests
+    "academic": "price_1SNlQz2NNm10BnLC3wFUtekN",      # $199/month - 75,000 requests
+    "commercial": "price_1SNlUg2NNm10BnLCy2NhebOI"     # $299/month per seat - 250,000 requests
     # Enterprise is custom pricing (contact sales)
 }
 

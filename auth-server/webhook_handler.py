@@ -234,6 +234,30 @@ def health_check():
     }), 200
 
 
+@app.route('/init-db', methods=['GET'])
+def init_db_endpoint():
+    """
+    ONE-TIME database initialization endpoint
+    Visit this URL once to create the api_keys table
+
+    IMPORTANT: Remove this endpoint after first use for security!
+    """
+    from database import init_database
+
+    try:
+        init_database()
+        return jsonify({
+            "success": True,
+            "message": "✅ Database initialized successfully!",
+            "note": "You can now remove this /init-db endpoint from the code"
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 8080))
     print(f"🚀 Webhook handler starting on port {port}")

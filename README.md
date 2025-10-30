@@ -9,7 +9,7 @@ Powered by proprietary Chavez Transform technology with proven mathematical foun
 - **Advanced Pattern Detection**: Find hidden structures in high-dimensional data
 - **Framework-Independent Analysis**: Works across different mathematical representations
 - **Proven Reliability**: Built on verified mathematical theorems
-- **Scales to 1000+ Dimensions**: Handles complexity traditional methods can't
+- **Scales from 16D to 256D**: Handles complexity traditional methods can't
 
 ## Installation
 
@@ -62,11 +62,11 @@ Complete end-to-end analysis pipeline.
 
 ## Pricing
 
-- **Indie**: $49/month - 10,000 requests
-- **Team**: $199/month - 50,000 requests
-- **Enterprise**: Custom pricing
+- **Individual**: $79.99/month
+- **Academ**: $199/month
+- **Commercial**: $299/month per seat
+- **Enterprise**: Multiple API keys, contact for pricing
 
-**FREE for educators, students, and academic researchers!**
 
 ## Research Foundation
 
@@ -76,7 +76,7 @@ Incorporates recent mathematical discoveries connecting to E8 exceptional Lie al
 
 ## Contact
 
-Email: paul@chavezailabs.com
+Email: iknowpi@gmail.com
 GitHub: https://github.com/pchavez2029/cailculator-mcp
 
 ---

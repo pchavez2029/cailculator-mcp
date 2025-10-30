@@ -911,9 +911,29 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
 
-        # Get customer email and tier from session
+        # Get customer email
         customer_email = session.get('customer_email') or session.get('customer_details', {}).get('email')
-        tier = session.get('metadata', {}).get('tier', 'student')
+
+        # Map price ID to tier (LIVE STRIPE PRICES - updated 2025-10-29)
+        subscription_id = session.get('subscription')
+        tier = 'individual'  # Default
+
+        if subscription_id:
+            try:
+                subscription = stripe.Subscription.retrieve(subscription_id)
+                price_id = subscription['items']['data'][0]['price']['id']
+
+                # Map your live price IDs to tiers
+                price_to_tier = {
+                    "price_1SNlPU2NNm10BnLC1ufwG07s": "individual",   # $79.99/month
+                    "price_1SNlQz2NNm10BnLC3wFUtekN": "academic",     # $199/month
+                    "price_1SNlUg2NNm10BnLCy2NhebOI": "commercial",   # $299/month
+                }
+
+                tier = price_to_tier.get(price_id, 'individual')
+            except Exception as e:
+                print(f"Error getting subscription tier: {e}")
+                tier = 'individual'
 
         if customer_email:
             # Check if user already exists

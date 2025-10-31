@@ -61,6 +61,13 @@ test_*.py
 *_STATUS.md
 RELEASE_SUMMARY*.md
 
+# Local development documentation (keep in local only)
+BUGFIX_*.md
+CHANGELOG_v*.md
+CONFIGURATION.md
+QUICKSTART.md
+TESTING.md
+
 # Local Claude settings
 .claude/settings.local.json
 

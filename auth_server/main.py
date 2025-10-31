@@ -580,10 +580,10 @@ async def migrate_database(db: Session = Depends(get_db)):
         # Add new enum values to PostgreSQL enum type
         "ALTER TYPE subscriptiontier ADD VALUE IF NOT EXISTS 'individual'",
         "ALTER TYPE subscriptiontier ADD VALUE IF NOT EXISTS 'commercial'",
-        # Update old enum values to new ones
-        "UPDATE users SET tier = 'individual' WHERE tier = 'free'",
-        "UPDATE users SET tier = 'individual' WHERE tier = 'indie'",
-        "UPDATE users SET tier = 'commercial' WHERE tier = 'professional'"
+        # Update old enum values to new ones (cast to text for comparison)
+        "UPDATE users SET tier = 'individual' WHERE tier::text = 'free'",
+        "UPDATE users SET tier = 'individual' WHERE tier::text = 'indie'",
+        "UPDATE users SET tier = 'commercial' WHERE tier::text = 'professional'"
     ]
 
     results = []

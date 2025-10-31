@@ -565,6 +565,35 @@ async def health_check(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Database error: {str(e)}")
 
+@app.post("/migrate-db")
+async def migrate_database(db: Session = Depends(get_db)):
+    """
+    One-time database migration to add rate limiting columns
+    Safe to run multiple times (uses IF NOT EXISTS)
+    """
+    from sqlalchemy import text
+
+    migrations = [
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS request_count_current_period INTEGER DEFAULT 0 NOT NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS period_start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS period_end_date TIMESTAMP"
+    ]
+
+    results = []
+    for migration in migrations:
+        try:
+            db.execute(text(migration))
+            db.commit()
+            results.append({"sql": migration, "status": "success"})
+        except Exception as e:
+            db.rollback()
+            results.append({"sql": migration, "status": "failed", "error": str(e)})
+
+    return {
+        "message": "Migration completed",
+        "migrations": results
+    }
+
 @app.post("/signup")
 async def signup(signup_request: SignupRequest, request: Request, db: Session = Depends(get_db)):
     """

@@ -46,7 +46,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=True)
-    tier = Column(SQLEnum(SubscriptionTier), default=SubscriptionTier.FREE, nullable=False)
+    tier = Column(SQLEnum(SubscriptionTier), default=SubscriptionTier.INDIVIDUAL, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Email verification

@@ -31,10 +31,9 @@ Base = declarative_base()
 # =============================================================================
 
 class SubscriptionTier(str, Enum):
-    FREE = "free"
-    INDIE = "indie"
+    INDIVIDUAL = "individual"
     ACADEMIC = "academic"
-    PROFESSIONAL = "professional"
+    COMMERCIAL = "commercial"
     ENTERPRISE = "enterprise"
 
 # =============================================================================
@@ -59,6 +58,11 @@ class User(Base):
     country_code = Column(String(2), nullable=True)  # ISO 2-letter country code
     signup_ip = Column(String, nullable=True)
     requires_manual_approval = Column(Integer, default=0, nullable=False)  # 0=auto, 1=manual
+
+    # Request tracking for rate limiting
+    request_count_current_period = Column(Integer, default=0, nullable=False)
+    period_start_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    period_end_date = Column(DateTime, nullable=True)
 
     # Relationships
     api_keys = relationship("APIKey", back_populates="user")

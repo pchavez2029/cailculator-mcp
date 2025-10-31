@@ -59,6 +59,14 @@ STRIPE_PRICES = {
     # Enterprise is custom pricing (contact sales)
 }
 
+# Monthly request limits by tier
+TIER_LIMITS = {
+    "individual": 25000,
+    "academic": 75000,
+    "commercial": 250000,
+    "enterprise": 999999999  # Unlimited (or very high limit)
+}
+
 # SendGrid configuration
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL", "iknowpi@gmail.com")
@@ -406,6 +414,7 @@ def send_manual_approval_pending_email(email: str, country_code: str) -> bool:
 def check_rate_limit(api_key: str, db: Session) -> tuple[bool, int, int]:
     """
     Check if user has exceeded their rate limit
+    Uses monthly billing period aligned with subscription start date
     Returns: (is_allowed, current_usage, limit)
     """
     # Find API key
@@ -418,19 +427,23 @@ def check_rate_limit(api_key: str, db: Session) -> tuple[bool, int, int]:
         return False, 0, 0
 
     # Get limit for tier
-    limit = TIER_LIMITS.get(user.tier.value, 100)
-    if limit == -1:  # Unlimited
-        return True, 0, -1
+    limit = TIER_LIMITS.get(user.tier.value, 25000)
 
-    # Count usage in last 30 days
-    from datetime import timedelta
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    usage_count = db.query(UsageLog).filter(
-        UsageLog.user_id == user.id,
-        UsageLog.timestamp >= thirty_days_ago
-    ).count()
+    # Check if we need to reset the period (new month)
+    now = datetime.utcnow()
+    if user.period_end_date is None or now > user.period_end_date:
+        # Reset counter for new billing period
+        user.request_count_current_period = 0
+        user.period_start_date = now
+        # Set period end to 30 days from now
+        user.period_end_date = now + timedelta(days=30)
+        db.commit()
 
-    return usage_count < limit, usage_count, limit
+    # Return current usage status
+    current_usage = user.request_count_current_period
+    is_allowed = current_usage < limit
+
+    return is_allowed, current_usage, limit
 
 def send_api_key_email(email: str, api_key: str, tier: str, customer_name: str = None):
     """
@@ -584,11 +597,11 @@ async def signup(signup_request: SignupRequest, request: Request, db: Session = 
     verification_token = secrets.token_urlsafe(32)
     token_expires = datetime.utcnow() + timedelta(hours=24)
 
-    # Create user (WITHOUT API key yet)
+    # Create user (WITHOUT API key yet - will be upgraded to paid tier via Stripe webhook)
     user = User(
         email=signup_request.email,
         name=signup_request.name or signup_request.email.split('@')[0],
-        tier=SubscriptionTier.FREE,
+        tier=SubscriptionTier.INDIVIDUAL,  # Default tier (will be updated by Stripe webhook)
         email_verified=0,
         verification_token=verification_token,
         verification_token_expires=token_expires,
@@ -769,6 +782,7 @@ async def log_usage(request: UsageRequest, db: Session = Depends(get_db)):
     """
     Log API usage for billing and analytics
     Called by MCP server after successful request
+    Increments the request counter for rate limiting
     """
     # Hash the provided key
     import hashlib
@@ -779,7 +793,12 @@ async def log_usage(request: UsageRequest, db: Session = Depends(get_db)):
     if not key_record:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
-    # Log usage
+    # Get user and increment request counter
+    user = db.query(User).filter(User.id == key_record.user_id).first()
+    if user:
+        user.request_count_current_period += 1
+
+    # Log usage (for detailed analytics)
     usage = UsageLog(
         user_id=key_record.user_id,
         tool_name=request.tool_name,

@@ -576,7 +576,11 @@ async def migrate_database(db: Session = Depends(get_db)):
     migrations = [
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS request_count_current_period INTEGER DEFAULT 0 NOT NULL",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS period_start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS period_end_date TIMESTAMP"
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS period_end_date TIMESTAMP",
+        # Update old enum values to new ones
+        "UPDATE users SET tier = 'individual' WHERE tier = 'FREE'",
+        "UPDATE users SET tier = 'individual' WHERE tier = 'indie'",
+        "UPDATE users SET tier = 'commercial' WHERE tier = 'professional'"
     ]
 
     results = []

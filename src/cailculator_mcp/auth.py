@@ -52,6 +52,10 @@ async def validate_api_key(api_key: str) -> Tuple[bool, str]:
                     return False, error
             else:
                 logger.error(f"Auth server returned {response.status_code}")
+                # Fallback to offline mode if server is having issues (5xx errors)
+                if response.status_code >= 500 and settings.enable_offline_fallback:
+                    logger.warning(f"Auth server error {response.status_code}, falling back to offline mode")
+                    return True, ""
                 return False, f"Auth server error (HTTP {response.status_code})"
 
     except httpx.TimeoutException:

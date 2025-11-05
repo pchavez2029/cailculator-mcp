@@ -3,7 +3,7 @@ CAILculator MCP Server
 High-dimensional data analysis for MCP clients
 """
 
-__version__ = "0.1.0"
+__version__ = "1.3.0"
 __author__ = "Paul Chavez"
 __email__ = "paul@chavezailabs.com"
 

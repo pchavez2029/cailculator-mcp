@@ -61,6 +61,154 @@ def _get_clifford():
         })
     return _clifford_module
 
+def _wrap_clifford_element(clifford_elem):
+    """
+    Wrap a CliffordElement to provide interface compatibility with Cayley-Dickson elements.
+
+    This allows Clifford elements to work with the existing operation code that expects
+    methods like coefficients(), norm_squared(), etc.
+    """
+    class CliffordWrapper:
+        def __init__(self, elem):
+            self._elem = elem
+
+        @property
+        def n(self):
+            """Expose n attribute from underlying Clifford element."""
+            return self._elem.n
+
+        @property
+        def dim(self):
+            """Expose dim attribute from underlying Clifford element."""
+            return self._elem.dim
+
+        @property
+        def coeffs(self):
+            """Expose coeffs attribute from underlying Clifford element."""
+            return self._elem.coeffs
+
+        def __mul__(self, other):
+            if isinstance(other, CliffordWrapper):
+                return CliffordWrapper(self._elem * other._elem)
+            return CliffordWrapper(self._elem * other)
+
+        def __add__(self, other):
+            if isinstance(other, CliffordWrapper):
+                return CliffordWrapper(self._elem + other._elem)
+            return CliffordWrapper(self._elem + other)
+
+        def __sub__(self, other):
+            if isinstance(other, CliffordWrapper):
+                return CliffordWrapper(self._elem - other._elem)
+            return CliffordWrapper(self._elem - other)
+
+        def __abs__(self):
+            return abs(self._elem)
+
+        def __str__(self):
+            return str(self._elem)
+
+        def coefficients(self):
+            """Return coefficients as list (compatibility method)."""
+            return list(self._elem.coeffs)
+
+        def conjugate(self):
+            """Clifford conjugation - not standard, return copy for now."""
+            # Clifford algebras don't have standard conjugation like Cayley-Dickson
+            # For compatibility, return a copy
+            import numpy as np
+            return CliffordWrapper(type(self._elem)(n=self._elem.n, coeffs=self._elem.coeffs.copy()))
+
+        def norm_squared(self):
+            """Return squared norm."""
+            return float(abs(self._elem) ** 2)
+
+        @property
+        def real(self):
+            """Return scalar (real) part."""
+            return float(self._elem.coeffs[0])
+
+        def inverse(self):
+            """Compute inverse - not generally available for Clifford elements."""
+            raise NotImplementedError("Inverse not implemented for Clifford elements")
+
+        def is_zero_divisor(self):
+            """Check if element is a zero divisor."""
+            # In Clifford algebra, an element is a zero divisor if its norm is zero but it's not zero
+            return self.norm_squared() < 1e-16 and not self._elem.is_zero()
+
+    return CliffordWrapper(clifford_elem)
+
+
+def _wrap_cayley_dickson_element(cd_elem):
+    """
+    Wrap a Cayley-Dickson element to provide additional methods like is_zero_divisor().
+
+    This allows Cayley-Dickson elements from the hypercomplex library to have
+    a consistent interface with Clifford elements.
+    """
+    class CayleyDicksonWrapper:
+        def __init__(self, elem):
+            self._elem = elem
+
+        def __mul__(self, other):
+            if isinstance(other, CayleyDicksonWrapper):
+                return CayleyDicksonWrapper(self._elem * other._elem)
+            return CayleyDicksonWrapper(self._elem * other)
+
+        def __add__(self, other):
+            if isinstance(other, CayleyDicksonWrapper):
+                return CayleyDicksonWrapper(self._elem + other._elem)
+            return CayleyDicksonWrapper(self._elem + other)
+
+        def __sub__(self, other):
+            if isinstance(other, CayleyDicksonWrapper):
+                return CayleyDicksonWrapper(self._elem - other._elem)
+            return CayleyDicksonWrapper(self._elem - other)
+
+        def __abs__(self):
+            return abs(self._elem)
+
+        def __str__(self):
+            return str(self._elem)
+
+        def coefficients(self):
+            """Return coefficients as list."""
+            return list(self._elem.coefficients())
+
+        def conjugate(self):
+            """Return Cayley-Dickson conjugate."""
+            return CayleyDicksonWrapper(self._elem.conjugate())
+
+        def norm_squared(self):
+            """Return squared norm."""
+            return float(self._elem.norm_squared())
+
+        @property
+        def real(self):
+            """Return scalar (real) part."""
+            return float(self._elem.real_coefficient())
+
+        def inverse(self):
+            """Compute inverse."""
+            return CayleyDicksonWrapper(self._elem.inverse())
+
+        def is_zero_divisor(self):
+            """
+            Check if element is a zero divisor.
+
+            In Cayley-Dickson algebras, an element is a zero divisor if it has
+            zero norm but is not the zero element itself. This is rare for single
+            elements - zero divisors typically appear as pairs.
+            """
+            norm = abs(self._elem)
+            coeffs = list(self._elem.coefficients())
+            is_nonzero = any(abs(c) > 1e-10 for c in coeffs)
+            return norm < 1e-10 and is_nonzero
+
+    return CayleyDicksonWrapper(cd_elem)
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -336,6 +484,162 @@ TOOLS_DEFINITIONS = [
             },
             "required": ["visualization_type"]
         }
+    },
+    {
+        "name": "load_market_data",
+        "description": (
+            "Load financial market data from CSV, Excel, or JSON files. "
+            "Auto-detects OHLCV columns with flexible naming, validates data quality, "
+            "handles large files (>1GB) via batch processing, and filters by symbol/date range."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "Path to data file (CSV, Excel, JSON)"
+                },
+                "symbol": {
+                    "type": "string",
+                    "description": "Filter by ticker symbol (optional)"
+                },
+                "date_range": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Filter by date range [start_date, end_date] (optional)"
+                },
+                "batch_mode": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Enable batch processing for files >1GB"
+                },
+                "max_rows": {
+                    "type": "integer",
+                    "description": "Limit rows loaded (useful for testing)"
+                }
+            },
+            "required": ["file_path"]
+        }
+    },
+    {
+        "name": "market_indicators",
+        "description": (
+            "Calculate professional technical indicators for financial analysis: "
+            "RSI, MACD, Bollinger Bands, SMA/EMA, ATR, Stochastic, ADX, OBV, VWAP, Ichimoku. "
+            "Returns indicator values, trading signals, and interpretations at chosen terminology level."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "description": "OHLCV data dict with keys: open, high, low, close, volume"
+                },
+                "indicators": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["RSI", "MACD", "Bollinger", "SMA", "EMA", "ATR", "Stochastic", "ADX", "OBV", "VWAP"]
+                    },
+                    "description": "List of indicators to calculate"
+                },
+                "periods": {
+                    "type": "object",
+                    "description": "Custom periods for indicators (e.g., {rsi: 14, sma_period: 20})"
+                },
+                "terminology_level": {
+                    "type": "string",
+                    "enum": ["technical", "standard", "simple"],
+                    "default": "standard",
+                    "description": "Output terminology: technical (academic), standard (trader), simple (beginner)"
+                }
+            },
+            "required": ["data", "indicators"]
+        }
+    },
+    {
+        "name": "batch_analyze_market",
+        "description": (
+            "Analyze large financial datasets (GB-scale) using smart sampling strategy: "
+            "Sample subset → Quick analysis → If confident, identify suspicious periods → Deep dive. "
+            "Handles massive files efficiently by focusing on interesting patterns only."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "Path to large data file"
+                },
+                "analysis_type": {
+                    "type": "string",
+                    "enum": ["regime_detection", "pattern_discovery", "anomaly_detection"],
+                    "description": "Type of analysis to perform"
+                },
+                "sample_size": {
+                    "type": "integer",
+                    "default": 5000,
+                    "description": "Number of points to sample for quick analysis"
+                },
+                "confidence_threshold": {
+                    "type": "number",
+                    "default": 0.70,
+                    "description": "Confidence threshold for deep dive (0.0-1.0)"
+                },
+                "terminology_level": {
+                    "type": "string",
+                    "enum": ["technical", "standard", "simple"],
+                    "default": "standard",
+                    "description": "Output terminology level"
+                },
+                "max_deep_dive_periods": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "Maximum periods to analyze deeply"
+                }
+            },
+            "required": ["file_path", "analysis_type"]
+        }
+    },
+    {
+        "name": "regime_detection",
+        "description": (
+            "🏆 PREMIUM FEATURE: Dual-method regime detection combining statistical baseline (HMM) "
+            "with CAILculator's unique mathematical structure analysis (Chavez Transform, conjugation symmetry, zero divisors). "
+            "When both methods agree, trade with confidence. When they disagree, dig deeper. "
+            "This is what separates CAILculator from standard indicator libraries."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "description": "OHLCV price data (dict with 'close' prices or full OHLCV)"
+                },
+                "terminology_level": {
+                    "type": "string",
+                    "enum": ["technical", "standard", "simple"],
+                    "default": "standard",
+                    "description": "Output terminology: technical (quants), standard (traders), simple (beginners)"
+                },
+                "show_methodology": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Include detailed methodology explanation"
+                },
+                "min_confidence": {
+                    "type": "number",
+                    "default": 0.5,
+                    "description": "Minimum confidence threshold for actionable recommendations (0.0-1.0)"
+                },
+                "fast_mode": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Use downsampling for faster computation (5-10s vs 20-40s). Recommended for >500 data points."
+                }
+            },
+            "required": ["data"]
+        }
     }
 ]
 
@@ -352,7 +656,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         Tool result dict
     """
     logger.info(f"Calling tool: {name}")
-    
+
     if name == "compute_high_dimensional":
         return await compute_high_dimensional(arguments)
     elif name == "chavez_transform":
@@ -363,6 +667,18 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         return await analyze_dataset(arguments)
     elif name == "illustrate":
         return await illustrate(arguments)
+    elif name == "load_market_data":
+        from .data_loaders import load_market_data
+        return await load_market_data(arguments)
+    elif name == "market_indicators":
+        from .quant_indicators import market_indicators
+        return await market_indicators(arguments)
+    elif name == "batch_analyze_market":
+        from .batch_processor import batch_analyze_market
+        return await batch_analyze_market(arguments)
+    elif name == "regime_detection":
+        from .regime_detection import regime_detection
+        return await regime_detection(arguments)
     else:
         raise ValueError(f"Unknown tool: {name}")
 
@@ -452,12 +768,33 @@ async def compute_high_dimensional(arguments: Dict[str, Any]) -> Dict[str, Any]:
                     "error": f"Operand {i} has {len(op)} coefficients, expected {dimension}"
                 }
         
-        # Create hypercomplex numbers from operands
+        # Create algebra elements from operands based on framework
         try:
-            hypercomplex = _get_hypercomplex()
-            hypercomplex_operands = [hypercomplex.create_hypercomplex(dimension, op) for op in operands]
+            if framework == "clifford":
+                # Use Clifford algebra
+                import math
+                np = _get_numpy()
+                clifford = _get_clifford()
+                n = int(math.log2(dimension))
+
+                # Create Clifford elements and wrap them for compatibility
+                hypercomplex_operands = []
+                for op in operands:
+                    clifford_elem = clifford.CliffordElement(n=n, coeffs=np.array(op))
+                    # Wrap to provide compatible interface
+                    wrapped = _wrap_clifford_element(clifford_elem)
+                    hypercomplex_operands.append(wrapped)
+            else:
+                # Use Cayley-Dickson (default)
+                hypercomplex = _get_hypercomplex()
+                hypercomplex_operands = []
+                for op in operands:
+                    cd_elem = hypercomplex.create_hypercomplex(dimension, op)
+                    # Wrap to provide compatible interface (including is_zero_divisor method)
+                    wrapped = _wrap_cayley_dickson_element(cd_elem)
+                    hypercomplex_operands.append(wrapped)
         except Exception as e:
-            return {"error": f"Failed to create hypercomplex numbers: {str(e)}"}
+            return {"error": f"Failed to create algebra elements: {str(e)}"}
         
         # Perform operation
         result = None
@@ -541,31 +878,44 @@ async def compute_high_dimensional(arguments: Dict[str, Any]) -> Dict[str, Any]:
         elif operation == "inverse":
             if len(hypercomplex_operands) != 1:
                 return {"error": "Inverse requires exactly 1 operand"}
-            
+
             try:
                 result = hypercomplex_operands[0].inverse()
-                
+
                 # Verify: x * x^(-1) should be (1, 0, 0, ...)
                 verification = hypercomplex_operands[0] * result
-                hypercomplex = _get_hypercomplex()
-                identity = hypercomplex.create_hypercomplex(dimension, [1.0] + [0.0]*(dimension-1))
-                verification_error = abs(verification - identity)
-                
+                if framework == "clifford":
+                    # For Clifford, identity has scalar part 1
+                    import numpy as np
+                    identity_coeffs = np.zeros(dimension)
+                    identity_coeffs[0] = 1.0
+                    from .clifford_verified import CliffordElement
+                    import math
+                    n = int(math.log2(dimension))
+                    identity = CliffordElement(n=n, coeffs=identity_coeffs)
+                    verification_error = abs(verification._elem - identity) if hasattr(verification, '_elem') else float('inf')
+                else:
+                    hypercomplex = _get_hypercomplex()
+                    identity = hypercomplex.create_hypercomplex(dimension, [1.0] + [0.0]*(dimension-1))
+                    verification_error = abs(verification - identity)
+
                 metadata = {
                     "original_norm": float(abs(hypercomplex_operands[0])),
                     "inverse_norm": float(abs(result)),
                     "verification_error": float(verification_error),
                     "is_verified": verification_error < 1e-6
                 }
-                
-            except ValueError as e:
+
+            except (ValueError, NotImplementedError) as e:
                 return {
                     "success": False,
                     "error": str(e),
                     "operation": operation,
                     "dimension": dimension,
                     "dimension_name": dim_name,
-                    "note": "This element may be a zero divisor and cannot be inverted"
+                    "framework": framework,
+                    "note": ("Inverse not generally available in Clifford algebras" if framework == "clifford"
+                            else "This element may be a zero divisor and cannot be inverted")
                 }
                 
         elif operation == "is_zero_divisor":

@@ -1,12 +1,17 @@
 """
 CAILculator MCP Server
 Main server implementation handling MCP protocol communication
+
+Supports two transport modes:
+- stdio: For Claude Desktop (default)
+- http: For Gemini CLI and other HTTP-based MCP clients
 """
 
 import asyncio
 import json
 import logging
 import sys
+import argparse
 from typing import Any, Dict
 
 # Lazy imports to speed up server startup
@@ -332,10 +337,143 @@ class MCPServer:
                 continue
 
 
-def main():
-    """Entry point for the MCP server."""
+async def run_http_server(host: str = "0.0.0.0", port: int = 8080):
+    """
+    Run MCP server in HTTP mode for Gemini CLI and other HTTP-based clients.
+
+    Args:
+        host: Host to bind to (default: 0.0.0.0 for all interfaces)
+        port: Port to listen on (default: 8080)
+    """
+    try:
+        from aiohttp import web
+    except ImportError:
+        logger.error("aiohttp is required for HTTP mode. Install with: pip install aiohttp")
+        sys.exit(1)
+
     server = MCPServer()
-    asyncio.run(server.run())
+    app = web.Application()
+
+    async def handle_manifest(request):
+        """
+        Handle GET /mcp/manifest - return tool definitions.
+
+        This endpoint is required by Gemini CLI and other HTTP MCP clients.
+        """
+        tools = get_tools()
+        manifest = {
+            "protocolVersion": "2024-11-05",
+            "serverInfo": {
+                "name": "cailculator-mcp",
+                "version": "1.3.0"
+            },
+            "capabilities": {
+                "tools": {}
+            },
+            "tools": tools.TOOLS_DEFINITIONS
+        }
+        return web.json_response(manifest)
+
+    async def handle_message(request):
+        """
+        Handle POST /message - process MCP JSON-RPC messages.
+
+        This is equivalent to the stdio message handling.
+        """
+        try:
+            data = await request.json()
+            response = await server.handle_request(data)
+            return web.json_response(response)
+        except json.JSONDecodeError:
+            return web.json_response(
+                {
+                    "jsonrpc": "2.0",
+                    "id": None,
+                    "error": {
+                        "code": -32700,
+                        "message": "Parse error: Invalid JSON"
+                    }
+                },
+                status=400
+            )
+        except Exception as e:
+            logger.error(f"Error handling HTTP message: {e}", exc_info=True)
+            return web.json_response(
+                {
+                    "jsonrpc": "2.0",
+                    "id": None,
+                    "error": {
+                        "code": -32603,
+                        "message": f"Internal error: {str(e)}"
+                    }
+                },
+                status=500
+            )
+
+    async def handle_health(request):
+        """Health check endpoint."""
+        return web.json_response({"status": "ok", "server": "cailculator-mcp"})
+
+    # Register routes
+    app.router.add_get("/mcp/manifest", handle_manifest)
+    app.router.add_post("/message", handle_message)
+    app.router.add_get("/health", handle_health)
+
+    # Log server configuration
+    logger.info(f"CAILculator MCP Server starting in HTTP mode...")
+    logger.info(f"Dev mode: {server.settings.enable_dev_mode}")
+    logger.info(f"Auth endpoint: {server.settings.auth_endpoint}")
+    logger.info(f"Listening on http://{host}:{port}")
+    logger.info(f"Manifest endpoint: http://{host}:{port}/mcp/manifest")
+    logger.info(f"Message endpoint: http://{host}:{port}/message")
+
+    # Start server
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, host, port)
+    await site.start()
+
+    # Keep server running
+    try:
+        await asyncio.Event().wait()
+    except KeyboardInterrupt:
+        logger.info("Shutting down HTTP server")
+    finally:
+        await runner.cleanup()
+
+
+def main():
+    """Entry point for the MCP server with transport mode selection."""
+    parser = argparse.ArgumentParser(
+        description="CAILculator MCP Server - High-dimensional data analysis with dual algebra frameworks"
+    )
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "http"],
+        default="stdio",
+        help="Transport mode: stdio (Claude Desktop) or http (Gemini CLI)"
+    )
+    parser.add_argument(
+        "--host",
+        default="0.0.0.0",
+        help="Host to bind to in HTTP mode (default: 0.0.0.0)"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8080,
+        help="Port to listen on in HTTP mode (default: 8080)"
+    )
+
+    args = parser.parse_args()
+
+    if args.transport == "http":
+        # Run in HTTP mode for Gemini CLI
+        asyncio.run(run_http_server(host=args.host, port=args.port))
+    else:
+        # Run in stdio mode for Claude Desktop (default)
+        server = MCPServer()
+        asyncio.run(server.run())
 
 
 if __name__ == "__main__":

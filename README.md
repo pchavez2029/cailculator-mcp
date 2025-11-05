@@ -166,8 +166,6 @@ The HTTP server provides the same tools as stdio mode but with Gemini's 2M token
 
 **Contact paul@chavezailabs.com for API key access.**
 
-**Free for educators and students!**
-
 ## Usage
 
 ### General Analysis

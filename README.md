@@ -286,7 +286,7 @@ You pay for scale, support, and expertise.
 - 📧 Email support (24hr response)
 - 💡 Perfect for: Individual traders testing the approach
 
-**Quant Professional - $1,499/mo** ⭐ Most Popular
+**Quant Professional - $1,499/mo**
 *Scale it up for serious analysis*
 
 - ✅ **Everything in Explorer, plus:**

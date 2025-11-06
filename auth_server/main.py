@@ -55,8 +55,12 @@ STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 STRIPE_PRICES = {
     "individual": "price_1SNlPU2NNm10BnLC1ufwG07s",    # $79.99/month - 25,000 requests
     "academic": "price_1SNlQz2NNm10BnLC3wFUtekN",      # $199/month - 75,000 requests
-    "commercial": "price_1SNlUg2NNm10BnLCy2NhebOI"     # $299/month per seat - 250,000 requests
-    # Enterprise is custom pricing (contact sales)
+    "commercial": "price_1SNlUg2NNm10BnLCy2NhebOI",    # $299/month per seat - 250,000 requests
+    # Quant Trader Tiers (BETA)
+    "quant_explorer": "price_1SQGie2NNm10BnLCyraRcDSA",      # $599/month - 100,000 requests
+    "quant_professional": "price_1SQGm42NNm10BnLCmG5yyv63",  # $1,499/month - 500,000 requests
+    "quant_elite": "price_1SQGox2NNm10BnLCcROJSo91"          # $3,499/month - Unlimited
+    # Enterprise and Quant Enterprise are custom pricing (contact sales)
 }
 
 # Monthly request limits by tier
@@ -64,7 +68,11 @@ TIER_LIMITS = {
     "individual": 25000,
     "academic": 75000,
     "commercial": 250000,
-    "enterprise": 999999999  # Unlimited (or very high limit)
+    "enterprise": 999999999,  # Unlimited (or very high limit)
+    # Quant Trader Tiers (BETA)
+    "quant_explorer": 100000,
+    "quant_professional": 500000,
+    "quant_elite": -1  # Unlimited
 }
 
 # SendGrid configuration
@@ -134,7 +142,11 @@ TIER_LIMITS = {
     "individual": 25_000,       # $79.99/month - 25,000 requests
     "academic": 75_000,         # $199/month - 75,000 requests
     "commercial": 250_000,      # $299/month per seat - 250,000 requests
-    "enterprise": -1            # Custom pricing - Unlimited
+    "enterprise": -1,           # Custom pricing - Unlimited
+    # Quant Trader Tiers (BETA)
+    "quant_explorer": 100_000,      # $599/month - 100,000 requests
+    "quant_professional": 500_000,  # $1,499/month - 500,000 requests
+    "quant_elite": -1               # $3,499/month - Unlimited
 }
 
 # =============================================================================
@@ -277,7 +289,11 @@ def send_api_key_email(email: str, api_key: str, tier: str) -> bool:
         "individual": {"limit": "25,000 requests/month", "price": "$79.99/month"},
         "academic": {"limit": "75,000 requests/month", "price": "$199/month"},
         "commercial": {"limit": "250,000 requests/month per seat", "price": "$299/month per seat"},
-        "enterprise": {"limit": "Unlimited", "price": "Custom pricing"}
+        "enterprise": {"limit": "Unlimited", "price": "Custom pricing"},
+        # Quant Trader Tiers (BETA)
+        "quant_explorer": {"limit": "100,000 requests/month", "price": "$599/month"},
+        "quant_professional": {"limit": "500,000 requests/month", "price": "$1,499/month"},
+        "quant_elite": {"limit": "Unlimited requests", "price": "$3,499/month"}
     }
 
     tier_details = tier_info.get(tier, {"limit": "Unknown", "price": "Unknown"})
@@ -457,9 +473,13 @@ def send_api_key_email(email: str, api_key: str, tier: str, customer_name: str =
     tier_names = {
         "individual": "Individual",
         "academic": "Academic",
-        "commercial": "Commercial"
+        "commercial": "Commercial",
+        "enterprise": "Enterprise",
+        "quant_explorer": "Quant Explorer (BETA)",
+        "quant_professional": "Quant Professional (BETA)",
+        "quant_elite": "Quant Elite (BETA)"
     }
-    tier_display = tier_names.get(tier, tier.title())
+    tier_display = tier_names.get(tier, tier.replace('_', ' ').title())
 
     # Email body
     body = f"""
@@ -1075,6 +1095,10 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     "price_1SNlPU2NNm10BnLC1ufwG07s": "individual",   # $79.99/month
                     "price_1SNlQz2NNm10BnLC3wFUtekN": "academic",     # $199/month
                     "price_1SNlUg2NNm10BnLCy2NhebOI": "commercial",   # $299/month
+                    # Quant Trader Tiers (BETA)
+                    "price_1SQGie2NNm10BnLCyraRcDSA": "quant_explorer",      # $599/month
+                    "price_1SQGm42NNm10BnLCmG5yyv63": "quant_professional",  # $1,499/month
+                    "price_1SQGox2NNm10BnLCcROJSo91": "quant_elite"          # $3,499/month
                 }
 
                 tier = price_to_tier.get(price_id, 'individual')

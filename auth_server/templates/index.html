@@ -303,61 +303,137 @@
 
         <div class="pricing">
             <h2>Choose Your Plan</h2>
-            <div class="pricing-grid">
+
+            <!-- Quant Trader Section -->
+            <div style="background: rgba(255,255,255,0.95); border-radius: 12px; padding: 40px; margin-bottom: 50px; box-shadow: 0 10px 40px rgba(0,0,0,0.15);">
+                <h3 style="color: #667eea; font-size: 2.2em; text-align: center; margin-bottom: 15px;">🔬 Quant Trader Tier - BETA</h3>
+                <p style="text-align: center; color: #555; font-size: 1.2em; margin-bottom: 30px;"><strong>For serious quantitative analysts who work with large datasets</strong></p>
+                <p style="text-align: center; color: #666; margin-bottom: 40px;">
+                    <strong>Optimized for Gemini CLI (recommended)</strong> - Large context window for GB-scale analysis<br>
+                    <em>Also supports: Claude Desktop, Claude Code (datasets &lt;100MB recommended)</em>
+                </p>
+
+                <div class="pricing-grid">
                 <div class="pricing-card">
-                    <h3>Individual</h3>
-                    <div class="price">$79.99<span class="price-period">/month</span></div>
-                    <div class="requests">25,000 requests/month</div>
+                    <h3>Quant Explorer</h3>
+                    <div class="price">$599<span class="price-period">/month</span></div>
+                    <div class="requests">Try our unique dual-method approach</div>
                     <ul class="features-list">
-                        <li>Zero divisor detection</li>
-                        <li>Pattern analysis</li>
-                        <li>Chavez Transform</li>
-                        <li>Advanced visualizations</li>
-                        <li>E8 lattice analysis</li>
-                        <li>Email support</li>
+                        <li>Full dual-method regime detection</li>
+                        <li>All 10 technical indicators</li>
+                        <li>All 3 terminology levels</li>
+                        <li>Up to 50K records per analysis</li>
+                        <li>Email support (24hr response)</li>
                     </ul>
-                    <button class="subscribe-btn" onclick="subscribe('individual')">Subscribe</button>
+                    <button class="subscribe-btn" onclick="subscribe('quant_explorer')">Subscribe</button>
                 </div>
 
                 <div class="pricing-card featured">
-                    <h3>Academic</h3>
-                    <div class="price">$199<span class="price-period">/month</span></div>
-                    <div class="requests">75,000 requests/month</div>
+                    <h3>Quant Professional</h3>
+                    <div class="price">$1,499<span class="price-period">/month</span></div>
+                    <div class="requests">Scale it up for serious analysis</div>
                     <ul class="features-list">
-                        <li>Everything in Individual</li>
-                        <li>Priority support</li>
-                        <li>Research collaboration</li>
-                        <li>Citation assistance</li>
-                        <li>Classroom use</li>
+                        <li>Everything in Explorer, plus:</li>
+                        <li>Up to 5M records per analysis (100x more)</li>
+                        <li>Batch processing for large datasets</li>
+                        <li>API access for automation</li>
+                        <li>1 custom pattern analysis per month</li>
+                        <li>Priority support (2hr response)</li>
                     </ul>
-                    <button class="subscribe-btn" onclick="subscribe('academic')">Subscribe</button>
+                    <button class="subscribe-btn" onclick="subscribe('quant_professional')">Subscribe</button>
                 </div>
 
                 <div class="pricing-card">
-                    <h3>Commercial</h3>
-                    <div class="price">$299<span class="price-period">/month per seat</span></div>
-                    <div class="requests">250,000 requests/month</div>
+                    <h3>Quant Elite</h3>
+                    <div class="price">$3,499<span class="price-period">/month</span></div>
+                    <div class="requests">Partner with us to master it</div>
                     <ul class="features-list">
-                        <li>Everything in Academic</li>
-                        <li>Dedicated support</li>
-                        <li>Custom integrations</li>
-                        <li>Usage analytics</li>
-                        <li>Team management</li>
+                        <li>Everything in Professional, plus:</li>
+                        <li>Unlimited records + GB-scale processing</li>
+                        <li>Monthly 60min strategy session</li>
+                        <li>2 custom developments per month</li>
+                        <li>Dedicated support (Slack/Discord)</li>
+                        <li>White-label option available</li>
                     </ul>
-                    <button class="subscribe-btn" onclick="subscribe('commercial')">Subscribe</button>
+                    <button class="subscribe-btn" onclick="subscribe('quant_elite')">Subscribe</button>
                 </div>
 
                 <div class="pricing-card">
-                    <h3>Enterprise</h3>
-                    <div class="price">Custom</div>
-                    <div class="requests">Unlimited requests</div>
+                    <h3>Quant Enterprise</h3>
+                    <div class="price">$10K+<span class="price-period">/month</span></div>
+                    <div class="requests">Custom deployment & research partnership</div>
                     <ul class="features-list">
-                        <li>Multiple API keys</li>
+                        <li>Everything in Elite, plus:</li>
+                        <li>On-premise deployment options</li>
+                        <li>Team training and onboarding</li>
+                        <li>Research partnership collaboration</li>
+                        <li>Custom indicators & methodologies</li>
                         <li>SLA guarantees</li>
-                        <li>White-label options</li>
-                        <li>Phone & Slack support</li>
                     </ul>
                     <a href="mailto:iknowpi@gmail.com" class="subscribe-btn">Contact Sales</a>
+                </div>
+            </div>
+
+            <!-- Standard Tiers Section -->
+            <div style="margin-top: 60px;">
+                <h3 style="text-align: center; color: white; margin-bottom: 40px; font-size: 2em;">Standard Tiers</h3>
+
+                <div class="pricing-grid">
+                    <div class="pricing-card">
+                        <h3>Individual</h3>
+                        <div class="price">$79.99<span class="price-period">/month</span></div>
+                        <div class="requests">25,000 requests/month</div>
+                        <ul class="features-list">
+                            <li>Zero divisor detection</li>
+                            <li>Pattern analysis</li>
+                            <li>Chavez Transform</li>
+                            <li>Advanced visualizations</li>
+                            <li>E8 lattice analysis</li>
+                            <li>Email support</li>
+                        </ul>
+                        <button class="subscribe-btn" onclick="subscribe('individual')">Subscribe</button>
+                    </div>
+
+                    <div class="pricing-card featured">
+                        <h3>Academic</h3>
+                        <div class="price">$199<span class="price-period">/month</span></div>
+                        <div class="requests">75,000 requests/month</div>
+                        <ul class="features-list">
+                            <li>Everything in Individual</li>
+                            <li>Priority support</li>
+                            <li>Research collaboration</li>
+                            <li>Citation assistance</li>
+                            <li>Classroom use</li>
+                        </ul>
+                        <button class="subscribe-btn" onclick="subscribe('academic')">Subscribe</button>
+                    </div>
+
+                    <div class="pricing-card">
+                        <h3>Commercial</h3>
+                        <div class="price">$299<span class="price-period">/month per seat</span></div>
+                        <div class="requests">250,000 requests/month</div>
+                        <ul class="features-list">
+                            <li>Everything in Academic</li>
+                            <li>Dedicated support</li>
+                            <li>Custom integrations</li>
+                            <li>Usage analytics</li>
+                            <li>Team management</li>
+                        </ul>
+                        <button class="subscribe-btn" onclick="subscribe('commercial')">Subscribe</button>
+                    </div>
+
+                    <div class="pricing-card">
+                        <h3>Enterprise</h3>
+                        <div class="price">Custom</div>
+                        <div class="requests">Unlimited requests</div>
+                        <ul class="features-list">
+                            <li>Multiple API keys</li>
+                            <li>SLA guarantees</li>
+                            <li>White-label options</li>
+                            <li>Phone & Slack support</li>
+                        </ul>
+                        <a href="mailto:iknowpi@gmail.com" class="subscribe-btn">Contact Sales</a>
+                    </div>
                 </div>
             </div>
 

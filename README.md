@@ -1,86 +1,80 @@
-# CAILculator MCP Server
+**Applied Pathological Mathematics™** was born from this hypothesis:
 
-High-dimensional data analysis via Model Context Protocol.
-
-Powered by proprietary Chavez Transform technology with proven mathematical foundations.
-
-## Features
-
-- **Advanced Pattern Detection**: Find hidden structures in high-dimensional data
-- **Framework-Independent Analysis**: Works across different mathematical representations
-- **Proven Reliability**: Built on verified mathematical theorems
-- **Scales from 16D to 256D**: Handles complexity traditional methods can't
-
-## 🔬 Quant Trader Tier - BETA
-
-**For serious quantitative analysts who work with large datasets**
-
-### Optimized for Gemini CLI (recommended)
-- **Large context window** for GB-scale analysis
-- Command-line workflow for automated strategies
-- Seamless integration with your existing data pipelines
-
-**Also supports:** Claude Desktop, Claude Code (datasets <100MB recommended)
+*Higher-dimensional algebras following the Cayley-Dickson sequence, which have been wrongly dismissed as "pathological" mathematics, can be interpreted and exploited for computational advantage, with particular benefits for AGI research and development.*
 
 ---
 
-### 📊 Large Dataset Processing
-- Handle **GB-scale** files with smart sampling strategy
-- Batch processing for years of historical data
-- Memory-efficient chunked reading for massive datasets
+# CAILculator MCP Server
 
-### 📈 Technical Indicators (10 Professional Indicators)
-- **Momentum**: RSI, MACD, Stochastic Oscillator
-- **Trend**: SMA/EMA, ADX, Ichimoku Cloud
-- **Volatility**: Bollinger Bands, ATR
-- **Volume**: OBV, VWAP
-- Signal interpretation and trading recommendations included
+**High-dimensional mathematical structure analysis for AI agents**
 
-### 🗣️ Financial Terminology Translation
-Three output levels to match your expertise:
-- **Technical**: Full mathematical notation (for quants/researchers)
-- **Standard**: Industry terminology (for traders/analysts)
-- **Simple**: Plain English (for beginners/executives)
+*"Better math, less suffering"*
 
-Example: "Conjugation symmetry" → "Mean reversion strength" → "How strongly price returns to average"
+## What This Is
 
-### 🎯 Smart Analysis
-- Regime detection (bull/bear/sideways market classification)
-- Pattern discovery with confidence scoring
-- Anomaly detection for unusual market events
+A Model Context Protocol server that lets AI agents compute with Cayley-Dickson algebras (sedenions 16D, pathions 32D, up to 256D) and associated Clifford algebras. Built on verified mathematical research into zero divisor patterns and structural properties discovered through systematic computational enumeration.
 
-## 🏆 PREMIUM: Dual-Method Regime Detection
+## Why "Pathological" Might Mean "Powerful"
 
-**This is what separates CAILculator from Bloomberg.**
+Beyond quaternions (4D) and octonions (8D), the Cayley-Dickson construction produces algebras with properties that violate conventional mathematical expectations:
 
-Everyone has Hidden Markov Models. Nobody has mathematical structure analysis.
+- **Non-associativity**: (a × b) × c ≠ a × (b × c)
+- **Zero divisors**: Non-zero numbers P, Q where P × Q = 0
+- **Loss of division algebra structure**: Not every non-zero element has a multiplicative inverse
+- **Dimensional complexity scaling**: Pattern counts grow superlinearly
 
-### The Unique Advantage
+These properties are called "pathological" because they break the rules of "nice" algebra that works for reals, complex numbers, quaternions, and octonions.
 
-**Statistical Method (what everyone has):**
-- Hidden Markov Models analyze price momentum
-- Standard quant finance approach
-- Classifies regimes as bull/bear/sideways
+**Pathological, however, doesn't mean useless.**
 
-**Mathematical Structure (UNIQUE to CAILculator):**
-- Chavez Transform in 32D sedenion space
-- Conjugation symmetry analysis
-- Zero divisor pattern detection
-- Structural stability assessment
+Zero divisors exhibit patterns and symmetries. Non-associativity encodes order-dependence and context-sensitivity. The vast space of algebraic dark matter in higher-dimensional math becomes huntable through hypothesis-driven computational enumeration: structure over brute force, verification over assumption.
 
-### When Both Methods Agree → High Confidence
-When statistical momentum AND mathematical structure point the same direction, trade with confidence.
+This server based on Applied Pathological Mathematics™ was designed to offer advantages for:
+- High-dimensional representation learning
+- Pattern detection in complex systems
+- Algebraic approaches to neural architecture
+- Structure-preserving embeddings
+- Time series regime detection
 
-### When They Disagree → WARNING
-Disagreement often precedes regime changes. Like getting conflicting opinions from two specialists - time to investigate further.
+## Mathematical Foundation
 
-### Three Explanation Levels
+### Cayley-Dickson Construction
 
-**Simple**: "Your data looks wobbly - like a seesaw getting unbalanced. When we see this, things might change soon."
+The Cayley-Dickson construction recursively doubles dimension:
+- **R** (reals, 1D) → **C** (complex, 2D) → **H** (quaternions, 4D) → **O** (octonions, 8D)
+- **S** (sedenions, 16D) → **P** (pathions, 32D) → 64D → 128D → 256D...
 
-**Standard**: "Price action suggests bullish continuation, but mathematical structure shows instability (symmetry: 0.34). Methods disagree - caution advised."
+Each doubling loses algebraic properties:
+- C: loses ordering
+- H: loses commutativity
+- O: loses associativity
+- S and beyond: gain zero divisors, lose division algebra structure
 
-**Technical**: "HMM classification: bull (p=0.82). Conjugation symmetry: 0.34 (structural breakdown). Zero divisor count: 7 (bifurcation risk: HIGH). Agreement: 0.32 → INVESTIGATE FURTHER."
+### Zero Divisors
+
+A **zero divisor** is a pair of non-zero elements P, Q in an algebra where P × Q = 0.
+
+In our research, we focus on two-term zero divisors of the form:
+```
+(e_a ± e_b) × (e_c ± e_d) = 0
+```
+
+where e_i are basis elements and a, b, c, d are distinct indices.
+
+**Verified Pattern Counts:**
+- 16D (Sedenions): 84 base patterns, 168 ordered patterns
+- 32D (Pathions): 460 base patterns, 920 ordered patterns
+
+These patterns exhibit:
+- **Block structure**: 16D blocks replicate with cross-block mixing
+- **Conjugation symmetry**: Predictable sign-flip behavior
+- **Computational stability**: Numerical verification to machine precision (< 1e-13)
+
+### Research Foundation
+
+Built on systematic computational enumeration published at DOI: [10.5281/zenodo.17402496](https://zenodo.org/records/17402496) - Framework-Independent Zero Divisor Patterns in Higher-Dimensional Cayley-Dickson Algebras: Discovery and Verification of The Canonical Six
+
+Recent work has identified connections to E8 exceptional Lie algebra structure (October 2025 discoveries) with modular development integrated. Ongoing research will continue further development into 512D.
 
 ## Installation
 
@@ -95,8 +89,8 @@ pip install cailculator-mcp[http]
 
 ## Setup
 
-CAILculator MCP Server supports **two transport modes**:
-- **stdio** (default): For Claude Desktop
+CAILculator MCP Server supports two transport modes:
+- **stdio** (default): For Claude Desktop, Claude Code
 - **http**: For Gemini CLI and other HTTP-based MCP clients
 
 ### Setup for Claude Desktop (stdio mode)
@@ -127,18 +121,13 @@ Add to your MCP client configuration:
 cailculator-mcp --transport http --port 8080
 ```
 
-Or with custom host/port:
-```bash
-cailculator-mcp --transport http --host 0.0.0.0 --port 8080
-```
-
 Set your API key via environment variable:
 ```bash
 export CAILCULATOR_API_KEY="your_api_key_here"
 # Windows: set CAILCULATOR_API_KEY=your_api_key_here
 ```
 
-**Important:** The server will not start without a valid API key. Contact paul@chavezailabs.com for API access.
+**Note:** The server requires a valid API key. Contact paul@chavezailabs.com for research access.
 
 #### 2. Configure Gemini CLI:
 
@@ -154,184 +143,212 @@ Add to `~/.gemini/settings.json`:
 }
 ```
 
-#### 3. Available endpoints:
+#### 3. HTTP endpoints:
 
-- **GET /mcp/manifest** - Tool definitions (required by Gemini CLI)
+- **GET /mcp/manifest** - Tool definitions
 - **POST /message** - MCP JSON-RPC messages
-- **GET /health** - Health check endpoint
-
-The HTTP server provides the same tools as stdio mode but with Gemini's 2M token context window, ideal for large regime detection responses.
-
----
-
-**Contact paul@chavezailabs.com for API key access.**
-
-## Usage
-
-### General Analysis
-```
-"Apply Chavez Transform to this dataset"
-"Detect patterns in my high-dimensional data"
-"Analyze this data for hidden structures"
-```
-
-### 🆕 Quant Finance Examples
-```
-"Load Bitcoin price data from bitcoin_daily.csv and calculate RSI and MACD indicators"
-
-"Detect regime changes in this S&P 500 data using dual-method analysis, show simple explanations"
-
-"Run regime detection on my portfolio - when do the methods disagree?"
-
-"Batch analyze this 10GB tick data file for anomalies"
-
-"Calculate Bollinger Bands and Stochastic oscillator, show signals in standard trader language"
-
-"Check if current market regime is stable - use technical terminology with full methodology"
-```
+- **GET /health** - Health check
 
 ## Available Tools
 
-### Core Mathematical Tools
+### Core Mathematical Operations
 
-#### chavez_transform
-Apply proprietary transform for high-dimensional analysis.
+#### `chavez_transform`
+Apply proprietary transform that maps data into high-dimensional Cayley-Dickson space for structural analysis.
 
-#### detect_patterns
-Find conjugation symmetries and structural patterns.
+**Parameters:**
+- `data`: Input numerical data
+- `dimension`: Target dimension (16, 32, 64, 128, 256)
+- `framework`: Algebra framework ("cayley_dickson" or "clifford")
 
-#### analyze_dataset
-Complete end-to-end analysis pipeline.
-
-#### compute_high_dimensional
-High-dimensional algebra calculations (Cayley-Dickson/Clifford frameworks).
-
-#### illustrate
-Generate visualizations: zero divisor networks, heatmaps, E8 mandalas, custom charts.
-
-### 🆕 Quant Finance Tools
-
-#### load_market_data
-Load financial data from CSV, Excel, or JSON files with smart OHLCV detection.
-- Auto-detects column names (flexible: "Close"/"close"/"CLOSE"/"price")
-- Validates data quality and cleans invalid values
-- Handles large files (>1GB) via batch processing
-- Filters by symbol and date range
-
-#### market_indicators
-Calculate 10 professional technical indicators with signal interpretation.
-- **Momentum**: RSI, MACD, Stochastic
-- **Trend**: SMA, EMA, ADX, Ichimoku
-- **Volatility**: Bollinger Bands, ATR
-- **Volume**: OBV, VWAP
-- Supports custom periods (e.g., RSI-14, RSI-21)
-- Terminology translation (technical/standard/simple)
-
-#### batch_analyze_market
-Analyze GB-scale datasets using smart sampling:
-1. Sample 5000 points → Quick analysis
-2. If confidence > 70% → Identify suspicious periods
-3. Deep dive on flagged periods only
-- **Regime detection**: Bull/bear/sideways classification
-- **Pattern discovery**: Autocorrelation and structure
-- **Anomaly detection**: Extreme events and outliers
-
-#### regime_detection 🏆 PREMIUM
-**The killer differentiator - why quants pay $1,499/mo**
-
-Dual-method regime detection combining two independent frameworks:
-- **Statistical baseline**: Hidden Markov Models (what everyone has)
-- **Mathematical structure**: Chavez Transform analysis in 32D sedenion space (UNIQUE to CAILculator)
-
-**When methods agree** → High confidence, trade normally
-**When methods disagree** → Warning signal, investigate further
-
-Features:
-- Conjugation symmetry analysis (structural stability)
-- Zero divisor pattern detection (bifurcation risk)
-- Agreement scoring between methods
-- Three terminology levels (technical/standard/simple)
-- Actionable recommendations based on confidence
-- Honest disclaimers (experimental indicator)
-
-Output includes:
-- Regime classification from both methods
-- Mathematical structure metrics (symmetry, stability, zero divisors)
-- Agreement score and overall confidence
-- Human-readable interpretation with personality
-- Specific recommendations (reduce positions, wait for clarity, etc.)
-
-## Pricing
-
-### Standard Tiers
-- **Individual**: $79.99/month - 25K requests/month
-- **Academic**: $199/month - 75K requests/month, .edu discount available
-- **Commercial**: $299/month - 250K requests/month per seat
-
-### 🆕 Quant Finance Tiers
-
-**ALL TIERS include our unique dual-method regime detection (HMM + Chavez Transform).**
-We don't hide our differentiator - we give everyone access to the unique math.
-You pay for scale, support, and expertise.
+**Returns:** Transformed representation with structural metadata
 
 ---
 
-**Quant Explorer - $599/mo**
-*Try our unique dual-method approach*
+#### `detect_patterns`
+Find conjugation symmetries and zero divisor resonances in transformed data.
 
-- ✅ **Full dual-method regime detection** (HMM + Chavez Transform structural analysis)
-- ✅ All 10 technical indicators
-- ✅ All 3 terminology levels (technical/standard/simple)
-- 📊 Up to 50K records per analysis
-- 📧 Email support (24hr response)
-- 💡 Perfect for: Individual traders testing the approach
+**Parameters:**
+- `transformed_data`: Output from chavez_transform
+- `pattern_type`: "conjugation", "zero_divisor", or "all"
 
-**Quant Professional - $1,499/mo**
-*Scale it up for serious analysis*
+**Returns:** Detected patterns with confidence scores
 
-- ✅ **Everything in Explorer, plus:**
-- 📊 Up to 5M records per analysis (100x more data)
-- ⚡ Batch processing for large datasets
-- 🔌 API access for automation
-- 🎯 1 custom pattern analysis per month
-- 🚀 Priority support (2hr response)
-- 💡 Perfect for: Professional quants and small hedge funds
+---
 
-**Quant Elite - $3,499/mo**
-*Partner with us to master it*
+#### `compute_high_dimensional`
+Direct high-dimensional algebra calculations.
 
-- ✅ **Everything in Professional, plus:**
-- 📊 Unlimited records + GB-scale batch processing
-- 🎓 **Monthly 60min strategy session** (apply Chavez Transform to your strategies)
-- 🛠️ 2 custom developments per month
-- 💬 Dedicated support channel (Slack/Discord)
-- 🏷️ White-label option available
-- ⚡ Priority feature requests
-- 💡 Perfect for: Institutional quants and research teams
+**Parameters:**
+- `operation`: "multiply", "add", "conjugate", "norm", "is_zero_divisor"
+- `operands`: List of hypercomplex numbers (as coefficient arrays)
+- `dimension`: Dimension of algebra (16, 32, 64, 128, 256)
 
-**Enterprise - Contact Sales**
-*Custom deployment and research partnership*
+**Returns:** Result of computation
 
-- Everything in Elite, plus:
-- 🏢 On-premise deployment options
-- 👥 Team training and onboarding
-- 🔬 Research partnership collaboration
-- 📈 Custom indicators and methodologies
-- 🔒 SLA guarantees
-- Starting at $10K/mo
-- 💡 Perfect for: Hedge funds, prop trading firms, research institutions
+---
 
+#### `analyze_dataset`
+End-to-end analysis pipeline combining transform, pattern detection, and interpretation.
 
-## Research Foundation
+**Parameters:**
+- `data`: Input dataset
+- `dimension`: Analysis dimension
+- `analysis_type`: "full", "quick", "custom"
 
-Built on research published at DOI: [10.5281/zenodo.17402496](https://zenodo.org/records/17402496)
+**Returns:** Complete analysis report with detected structures
 
-Incorporates recent mathematical discoveries connecting to E8 exceptional Lie algebra (October 2025).
+---
+
+#### `illustrate`
+Generate visualizations of algebraic structures and patterns.
+
+**Parameters:**
+- `visualization_type`: "zero_divisor_network", "pattern_heatmap", "e8_mandala", "dimension_comparison"
+- `data`: Optional data for visualization context
+
+**Returns:** Image or structured visualization data
+
+### Financial Analysis Tools
+
+The server includes specialized tools for time series and financial data analysis:
+
+#### `load_market_data`
+Load and validate financial time series data from CSV, Excel, or JSON files.
+
+**Features:**
+- Auto-detects OHLCV columns (flexible naming: "Close"/"close"/"CLOSE"/"price")
+- Data quality validation and cleaning
+- Large file handling (>1GB via chunked reading)
+- Date range filtering
+- Multi-symbol support
+
+---
+
+#### `market_indicators`
+Calculate technical indicators with signal interpretation.
+
+**Available indicators:**
+- **Momentum**: RSI, MACD, Stochastic Oscillator
+- **Trend**: SMA, EMA, ADX, Ichimoku Cloud
+- **Volatility**: Bollinger Bands, ATR
+- **Volume**: OBV, VWAP
+
+**Terminology levels:**
+- `technical`: Full mathematical notation
+- `standard`: Industry terminology
+- `simple`: Plain English explanations
+
+---
+
+#### `regime_detection`
+Dual-method regime analysis combining statistical and structural approaches.
+
+**Two independent methods:**
+1. **Statistical baseline**: Hidden Markov Models (HMM) for momentum-based regime classification
+2. **Mathematical structure**: Chavez Transform analysis in 32D sedenion space
+
+**Output includes:**
+- Regime classification (bull/bear/sideways) from both methods
+- Conjugation symmetry (structural stability measure)
+- Zero divisor count (bifurcation risk indicator)
+- Agreement score between methods
+- Confidence assessment
+- Actionable interpretation
+
+**When methods agree:** High confidence in regime classification
+**When methods disagree:** Potential regime transition warning
+
+---
+
+#### `batch_analyze_market`
+Smart sampling strategy for GB-scale datasets.
+
+**Process:**
+1. Sample ~5000 points for quick analysis
+2. Calculate confidence score
+3. If confidence > 70%, identify suspicious periods
+4. Deep dive on flagged periods only
+
+**Analysis types:**
+- Regime detection
+- Pattern discovery
+- Anomaly detection
+
+## Usage Examples
+
+### Mathematical Research
+```python
+# Find zero divisors in 32D pathion algebra
+result = compute_high_dimensional(
+    operation="multiply",
+    operands=[
+        [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, ...],  # e_1 + e_10
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, ...]   # e_4 - e_15
+    ],
+    dimension=32
+)
+# Check if norm ≈ 0 for zero divisor verification
+```
+
+### Pattern Detection in Data
+```
+"Apply Chavez Transform to this dataset in 32D and detect conjugation patterns"
+"Analyze this high-dimensional embedding for structural instabilities"
+"Find zero divisor resonances in this time series"
+```
+
+### Financial Analysis
+```
+"Load bitcoin_daily.csv and run dual-method regime detection"
+"Calculate RSI and MACD with technical terminology"
+"Batch analyze this 5GB tick data file for anomalies"
+```
+
+## For AGI Researchers
+
+If you're working on:
+- **High-dimensional embedding spaces**: Explore algebraic structure beyond Euclidean/Hilbert spaces
+- **Pattern emergence**: Study how zero divisors create branching structures in representations
+- **Neural architecture design**: Investigate non-associative operations for context-dependent computation
+- **Time series modeling**: Use structural stability measures alongside statistical methods
+- **Representation learning**: Test whether "pathological" algebras offer benefits for certain data types
+
+### Research Collaboration
+
+Interested in applying these tools to AGI research? Contact Paul Chavez at iknowpi@gmail.com for:
+- Research access and collaboration
+- Custom tool development
+- Mathematical consultation
+- Data analysis support
+
+## Technical Details
+
+### Numerical Precision
+- Zero divisor threshold: |P × Q| < 1e-10
+- Typical verified patterns: norm < 1e-13
+- Uses Python's `hypercomplex` library for stable computation
+
+### Supported Dimensions
+- 16D (Sedenions): 84 base zero divisor patterns
+- 32D (Pathions): 460 base patterns
+- 64D, 128D, 256D: Pattern catalogs under active research
+
+### Pattern Classes (32D)
+1. **Within-block patterns**: Inherited from 16D structure (84 base per block)
+2. **Cross-block patterns**: Terms span different 16D blocks (132 base)
+3. **Constant-offset patterns**: Same offset k for both terms (126 base)
+4. **Variable-offset patterns**: Different offsets k1, k2 (216 base)
+
+## Known Issues
+
+- Large file processing (>10GB) may require manual chunking for optimal memory usage.
 
 ## Contact
 
-Email: iknowpi@gmail.com
-GitHub: https://github.com/pchavez2029/cailculator-mcp
+**Research Collaboration:** paul@chavezailabs.com
+**GitHub:** https://github.com/pchavez2029/cailculator-mcp
+**General Inquiries:** iknowpi@gmail.com
 
 ---
 

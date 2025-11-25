@@ -58,7 +58,7 @@ STRIPE_PRICES = {
     "commercial": "price_1SNlUg2NNm10BnLCy2NhebOI",    # $299/month per seat - 250,000 requests
     # Quant Trader Tiers (BETA)
     "quant_explorer": "price_1SQGie2NNm10BnLCyraRcDSA",      # $599/month - 100,000 requests
-    "quant_professional": "price_1SQGm42NNm10BnLCmG5yyv63",  # $1,499/month - 500,000 requests
+    "quant_professional": "price_1SXDc82NNm10BnLC36hwqnaA",  # $1,499/month - 500,000 requests
     "quant_elite": "price_1SQGox2NNm10BnLCcROJSo91"          # $3,499/month - Unlimited
     # Enterprise and Quant Enterprise are custom pricing (contact sales)
 }
@@ -1097,7 +1097,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     "price_1SNlUg2NNm10BnLCy2NhebOI": "commercial",   # $299/month
                     # Quant Trader Tiers (BETA)
                     "price_1SQGie2NNm10BnLCyraRcDSA": "quant_explorer",      # $599/month
-                    "price_1SQGm42NNm10BnLCmG5yyv63": "quant_professional",  # $1,499/month
+                    "price_1SXDc82NNm10BnLC36hwqnaA": "quant_professional",  # $1,499/month
                     "price_1SQGox2NNm10BnLCcROJSo91": "quant_elite"          # $3,499/month
                 }
 

@@ -640,6 +640,37 @@ TOOLS_DEFINITIONS = [
             },
             "required": ["data"]
         }
+    },
+    {
+        "name": "zdtp_transmit",
+        "description": (
+            "Zero Divisor Transmission Protocol. Transmits 16D input through verified "
+            "mathematical gateways to 32D and 64D spaces. Returns dimensional states and "
+            "convergence score across all six Canonical Six patterns. "
+            "High convergence (>0.8) = robust structure. Low convergence (<0.5) = structural shift detected. "
+            "This is the foundation for ZDTP-based data integrity verification."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "input_16d": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                    "minItems": 16,
+                    "maxItems": 16,
+                    "description": "16-element input vector to transmit through gateways"
+                },
+                "gateway": {
+                    "type": "string",
+                    "enum": ["S1", "S2", "S3A", "S3B", "S4", "S5", "all"],
+                    "description": (
+                        "Gateway pattern to use: S1-S5 for single transmission, "
+                        "'all' for full cascade with convergence analysis"
+                    )
+                }
+            },
+            "required": ["input_16d", "gateway"]
+        }
     }
 ]
 
@@ -679,6 +710,8 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
     elif name == "regime_detection":
         from .regime_detection import regime_detection
         return await regime_detection(arguments)
+    elif name == "zdtp_transmit":
+        return await zdtp_transmit(arguments)
     else:
         raise ValueError(f"Unknown tool: {name}")
 
@@ -2482,3 +2515,139 @@ async def _create_custom(data: Dict, output_dir: str, timestamp: str,
     except Exception as e:
         logger.error(f"Error creating custom visualization: {e}", exc_info=True)
         return {"success": False, "error": str(e)}
+
+
+async def zdtp_transmit(arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Zero Divisor Transmission Protocol - transmit 16D input through gateways.
+
+    This tool implements the core ZDTP functionality:
+    - Single gateway transmission (16D → 32D → 64D)
+    - Full cascade with convergence analysis across all six gateways
+
+    Args:
+        arguments: Contains 'input_16d' (16-element array) and 'gateway' (S1-S5 or 'all')
+
+    Returns:
+        Transmission results with dimensional states and convergence metrics
+    """
+    try:
+        from .zdtp import ZDTPTransmission
+
+        # Parse arguments
+        input_16d = arguments.get("input_16d")
+        gateway = arguments.get("gateway")
+
+        # Validate inputs
+        if input_16d is None:
+            return {
+                "success": False,
+                "error": "Missing required parameter: input_16d"
+            }
+
+        if gateway is None:
+            return {
+                "success": False,
+                "error": "Missing required parameter: gateway"
+            }
+
+        if not isinstance(input_16d, list) or len(input_16d) != 16:
+            return {
+                "success": False,
+                "error": f"input_16d must be a 16-element array, got {len(input_16d) if isinstance(input_16d, list) else type(input_16d).__name__}"
+            }
+
+        # Convert to floats
+        try:
+            input_16d = [float(x) for x in input_16d]
+        except (TypeError, ValueError) as e:
+            return {
+                "success": False,
+                "error": f"All input_16d elements must be numbers: {e}"
+            }
+
+        # Create ZDTP transmission instance
+        zdtp = ZDTPTransmission()
+
+        # Execute transmission
+        if gateway.lower() == "all":
+            # Full cascade with convergence analysis
+            result = zdtp.full_cascade(input_16d)
+
+            return {
+                "success": True,
+                "operation": "zdtp_full_cascade",
+                "protocol": result["protocol"],
+                "version": result["version"],
+                "input_dimension": 16,
+                "output_dimensions": [32, 64],
+                "gateways_used": list(result["gateways"].keys()),
+                "convergence": result["convergence"],
+                "interpretation": result["interpretation"],
+                "gateway_results": {
+                    name: {
+                        "verified": data.get("verified", False),
+                        "magnitude_64d": data.get("magnitude_64d"),
+                        "product_norm": data.get("product_norm"),
+                        # Include truncated state previews
+                        "state_32d_preview": data.get("state_32d", [])[:8] if data.get("state_32d") else None,
+                        "state_64d_preview": data.get("state_64d", [])[:8] if data.get("state_64d") else None,
+                    }
+                    for name, data in result["gateways"].items()
+                },
+                "summary": (
+                    f"ZDTP cascade complete. Convergence score: {result['convergence']['score']:.3f} "
+                    f"({result['interpretation']['level']}). "
+                    f"{result['interpretation']['description']}"
+                )
+            }
+        else:
+            # Single gateway transmission
+            gateway = gateway.upper()
+            valid_gateways = ["S1", "S2", "S3A", "S3B", "S4", "S5"]
+
+            if gateway not in valid_gateways:
+                return {
+                    "success": False,
+                    "error": f"Invalid gateway: {gateway}. Valid options: {valid_gateways} or 'all'"
+                }
+
+            result = zdtp.transmit(input_16d, gateway)
+
+            return {
+                "success": True,
+                "operation": "zdtp_single_transmission",
+                "gateway": gateway,
+                "gateway_info": result["gateway_info"],
+                "zero_divisor_verified": result["zero_divisor_verified"],
+                "product_norm": result["product_norm"],
+                "dimensions": {
+                    "input": 16,
+                    "intermediate": 32,
+                    "output": 64
+                },
+                "state_16d": result["state_16d"],
+                "state_32d": result["state_32d"],
+                "state_64d": result["state_64d"],
+                "lossless_verification": {
+                    "16d_preserved_in_32d": result["state_32d"][:16] == result["state_16d"],
+                    "32d_preserved_in_64d": result["state_64d"][:32] == result["state_32d"]
+                },
+                "summary": (
+                    f"ZDTP transmission via {gateway} gateway complete. "
+                    f"Zero divisor verified (||P×Q|| = {result['product_norm']:.2e}). "
+                    f"16D → 32D → 64D lossless transmission successful."
+                )
+            }
+
+    except ValueError as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+    except Exception as e:
+        logger.error(f"ZDTP transmission error: {e}", exc_info=True)
+        return {
+            "success": False,
+            "error": f"ZDTP transmission failed: {str(e)}"
+        }

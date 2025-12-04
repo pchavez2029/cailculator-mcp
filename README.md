@@ -209,6 +209,35 @@ Generate visualizations of algebraic structures and patterns.
 
 **Returns:** Image or structured visualization data
 
+---
+
+#### `zdtp_transmit`
+Zero Divisor Transmission Protocol - transmit 16D data through verified mathematical gateways to 32D and 64D spaces with convergence analysis.
+
+**Parameters:**
+- `input_16d`: 16-element coefficient array
+- `gateway`: Gateway to use:
+  - `"S1"` - Master Gateway: (e₁ + e₁₄) × (e₃ + e₁₂) = 0
+  - `"S2"` - Multi-Modal Gateway: (e₃ + e₁₂) × (e₅ + e₁₀) = 0
+  - `"S3A"` - Discontinuous Gateway: (e₄ + e₁₁) × (e₆ + e₉) = 0
+  - `"S3B"` - Conjugate Pair Gateway: (e₁ - e₁₄) × (e₃ - e₁₂) = 0
+  - `"S4"` - Linear Gateway: (e₁ - e₁₄) × (e₅ + e₁₀) = 0
+  - `"S5"` - Transformation Gateway: (e₂ - e₁₃) × (e₆ + e₉) = 0
+  - `"all"` - Full cascade through all 6 gateways with convergence scoring
+
+**Returns:**
+- Dimensional states (16D → 32D → 64D lossless transmission)
+- Zero divisor verification status
+- Convergence score (for "all"): 0.0-1.0 measuring structural stability
+  - **>0.8**: High convergence - robust structure
+  - **0.5-0.8**: Moderate - some variance
+  - **<0.5**: Low - structural shift detected
+
+**Use Cases:**
+- Data integrity verification through mathematical structure
+- High-dimensional embedding stability analysis
+- Detecting structural shifts in time series data
+
 ### Financial Analysis Tools
 
 The server includes specialized tools for time series and financial data analysis:

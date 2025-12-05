@@ -87,6 +87,19 @@ For HTTP transport (Gemini CLI support):
 pip install cailculator-mcp[http]
 ```
 
+## Get Your API Key
+
+Visit the CAILculator portal to choose a subscription tier and get your API key:
+
+**https://cailculator-mcp-production.up.railway.app/**
+
+Available tiers:
+- **Individual** - Personal research and exploration
+- **Academic** - Students and academic researchers
+- **Commercial** - Business and production use
+- **Enterprise** - Large-scale organizational deployment
+- **Quantitative Finance** - Financial analysis and trading features
+
 ## Setup
 
 CAILculator MCP Server supports two transport modes:
@@ -127,7 +140,7 @@ export CAILCULATOR_API_KEY="your_api_key_here"
 # Windows: set CAILCULATOR_API_KEY=your_api_key_here
 ```
 
-**Note:** The server requires a valid API key. Contact paul@chavezailabs.com for research access.
+**Note:** The server requires a valid API key. Get yours at https://cailculator-mcp-production.up.railway.app/
 
 #### 2. Configure Gemini CLI:
 

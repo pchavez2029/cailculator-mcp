@@ -1436,15 +1436,19 @@ def _generate_interpretation(results: Dict[str, Any]) -> str:
     # Transform
     if "transform" in results and results["transform"].get("success"):
         transform = results["transform"]
-        convergence = transform["convergence"]
-        
-        if convergence["all_converged"]:
+        convergence = transform.get("convergence")
+
+        if convergence and convergence.get("all_converged"):
             interpretation_parts.append(
                 f"Chavez Transform converged successfully with value {transform['transform_value']:.6e}."
             )
-        else:
+        elif convergence and "rate" in convergence:
             interpretation_parts.append(
                 f"Transform computed with {convergence['rate']*100:.0f}% convergence rate."
+            )
+        elif "transform_value" in transform:
+            interpretation_parts.append(
+                f"Chavez Transform computed with value {transform['transform_value']:.6e}."
             )
     
     # Patterns
@@ -1483,6 +1487,7 @@ async def illustrate(arguments: Dict[str, Any]) -> Dict[str, Any]:
     try:
         import os
         import datetime
+        from pathlib import Path
 
         # Parse arguments
         vis_type = arguments.get("visualization_type")
@@ -1495,8 +1500,12 @@ async def illustrate(arguments: Dict[str, Any]) -> Dict[str, Any]:
 
         logger.info(f"Creating {vis_type} visualization in {output_format} format")
 
-        # Create output directory
-        output_dir = os.path.join("assets", "visualizations")
+        # Create output directory — use env var or default to /mnt/user-data/outputs/
+        base_output_dir = os.environ.get(
+            "CAILCULATOR_OUTPUT_DIR",
+            "/mnt/user-data/outputs/"
+        )
+        output_dir = str(Path(base_output_dir) / "visualizations")
         os.makedirs(output_dir, exist_ok=True)
 
         # Generate timestamp for unique filenames
@@ -1523,6 +1532,19 @@ async def illustrate(arguments: Dict[str, Any]) -> Dict[str, Any]:
         # Call the appropriate handler
         handler = visualization_handlers[vis_type]
         result = await handler(data, output_dir, timestamp, output_format, style)
+
+        # Post-save verification: check that the file actually exists on disk
+        for path_key in ("static_path", "interactive_path"):
+            file_path = result.get(path_key)
+            if file_path:
+                abs_path = str(Path(file_path).resolve())
+                if os.path.exists(abs_path):
+                    result[path_key] = abs_path
+                else:
+                    return {
+                        "success": False,
+                        "error": f"Visualization file was not written successfully: {abs_path}"
+                    }
 
         # Add metadata
         result["visualization_type"] = vis_type

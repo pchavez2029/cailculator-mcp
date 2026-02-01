@@ -1126,6 +1126,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 db.add(api_key_record)
                 db.commit()
                 print(f"✅ Generated new API key for existing user")
+                print(f"✅ DB STORED - existing user key for {customer_email}: {api_key_plain}")
             else:
                 # Create user
                 print(f"   Creating new user...")
@@ -1150,11 +1151,12 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 db.add(api_key_record)
                 db.commit()
                 print(f"✅ Generated API key")
+                print(f"✅ DB STORED - new user key for {customer_email}: {api_key_plain}")
 
-            # Send API key via email (for both new and existing users)
-            print(f"   Sending email to {customer_email}...")
-            send_api_key_email(customer_email, api_key_plain, tier, customer_name)
-            print(f"✅ Complete! API key: {api_key_plain[:25]}...")
+            # SendGrid email disabled - retrieve keys from logs and send manually
+            # send_api_key_email(customer_email, api_key_plain, tier, customer_name)
+            print(f"✅ Complete! API key stored in DB. Manual email delivery needed.")
+            print(f"   Customer: {customer_email} | Tier: {tier} | Key: {api_key_plain}")
 
     return {"status": "success"}
 

@@ -12,7 +12,7 @@
 
 ## What This Is
 
-A Model Context Protocol server that lets AI agents compute with Cayley-Dickson algebras (sedenions 16D, pathions 32D, up to 256D) and associated Clifford algebras. Built on verified mathematical research into zero divisor patterns and structural properties discovered through systematic computational enumeration.
+A Model Context Protocol server that lets AI agents compute with Cayley-Dickson algebras (sedenions 16D, pathions 32D, up to 256D) and associated Clifford algebras. Built on verified mathematical research into zero divisor patterns and structural properties discovered through systematic computational enumeration. Formally verified with Lean 4 proofs via Harmonic Math's Aristotle.
 
 ## Why "Pathological" Might Mean "Powerful"
 
@@ -72,77 +72,189 @@ These patterns exhibit:
 
 ### Research Foundation
 
-Built on systematic computational enumeration published at DOI: [10.5281/zenodo.17402496](https://zenodo.org/records/17402496) - Framework-Independent Zero Divisor Patterns in Higher-Dimensional Cayley-Dickson Algebras: Discovery and Verification of The Canonical Six
+Built on systematic computational enumeration published at DOI: [10.5281/zenodo.17402496](https://zenodo.org/records/17402496) - Framework-Independent Zero Divisor Patterns in Higher-Dimensional Cayley-Dickson Algebras: Discovery and Verification of The Canonical Six. Partial formal verification in Lean 4 (822 lines, 83% coverage) provides machine-verified mathematical proofs of core structural claims.
 
 Recent work has identified connections to E8 exceptional Lie algebra structure (October 2025 discoveries) with modular development integrated. Ongoing research will continue further development into 512D.
 
+## System Requirements
+
+### Python Version
+
+- **Required:** Python 3.10, 3.11, 3.12, or 3.13 (64-bit)
+- ❌ **NOT SUPPORTED:** Python 3.14+ (numba dependency limitation)
+- ❌ **NOT SUPPORTED:** 32-bit Python (scipy/numba require 64-bit)
+
+### Operating Systems
+
+- Windows 10/11
+- macOS 10.15+
+- Linux (Ubuntu 20.04+, Debian 10+, or equivalent)
+
 ## Installation
 
-```bash
-pip install cailculator-mcp
+### Windows Installation
+
+#### Step 1: Install Python (if needed)
+
+1. Download Python 3.13 (64-bit): https://www.python.org/downloads/release/python-3131/
+2. Scroll to "Files" section
+3. Click "Windows installer (64-bit)" - NOT the 32-bit version
+4. Run the installer
+5. ✅ **CRITICAL:** Check "Add Python to PATH" during installation
+6. Click "Install Now"
+
+#### Step 2: Install CAILculator
+
+Open PowerShell and run:
+
+```powershell
+py -3.13 -m pip install cailculator_mcp
 ```
 
-For HTTP transport (Gemini CLI support):
-```bash
-pip install cailculator-mcp[http]
+Installation takes 2-5 minutes (downloads ~100MB of scientific computing dependencies).
+
+#### Step 3: Get Your API Key
+
+Visit the [CAILculator API Portal](https://cailculator-mcp-production.up.railway.app/) to:
+
+- **Subscribe:** Choose from Individual, Academic, Commercial, Enterprise, or Quantitative Finance tiers
+- Have a coupon code? Apply during checkout
+
+> **Note:** API keys are delivered via email within 24 hours. For immediate access, email: iknowpi@gmail.com
+
+#### Step 4: Configure Claude Desktop
+
+Open the configuration file:
+
+```powershell
+notepad %APPDATA%\Claude\claude_desktop_config.json
 ```
 
-## Get Your API Key
-
-Visit the CAILculator portal to choose a subscription tier and get your API key:
-
-**https://cailculator-mcp-production.up.railway.app/**
-
-Available tiers:
-- **Individual** - Personal research and exploration
-- **Academic** - Students and academic researchers
-- **Commercial** - Business and production use
-- **Enterprise** - Large-scale organizational deployment
-- **Quantitative Finance** - Financial analysis and trading features
-
-## Setup
-
-CAILculator MCP Server supports two transport modes:
-- **stdio** (default): For Claude Desktop, Claude Code
-- **http**: For Gemini CLI and other HTTP-based MCP clients
-
-### Setup for Claude Desktop (stdio mode)
-
-Add to your MCP client configuration:
-
-**Mac/Linux:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+Add this configuration (replace placeholders with your actual values):
 
 ```json
 {
   "mcpServers": {
     "cailculator": {
-      "command": "cailculator-mcp",
+      "command": "C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python313\\Scripts\\cailculator-mcp.exe",
+      "args": ["--transport", "stdio"],
       "env": {
-        "CAILCULATOR_API_KEY": "your_api_key_here"
+        "CAILCULATOR_API_KEY": "cail_your_api_key_here",
+        "CAILCULATOR_ENABLE_OFFLINE_FALLBACK": "true"
       }
     }
   }
 }
 ```
 
-### Setup for Gemini CLI (HTTP mode)
+**Important Notes:**
+- Use double backslashes (`\\`) in Windows paths
+- Replace `YOUR_USERNAME` with your actual Windows username
+- Replace `cail_your_api_key_here` with your actual API key from the portal
 
-#### 1. Start the HTTP server:
+Save and close Notepad.
+
+#### Step 5: Restart Claude Desktop
+
+Completely quit and restart Claude Desktop (not just refresh).
+
+#### Step 6: Verify Installation
+
+1. Open Claude Desktop
+2. Look for the 🔌 icon in the bottom-right corner
+3. Click it - you should see "cailculator" listed with available tools
+4. Test with: "Use CAILculator to multiply two 16D sedenions"
+
+### macOS/Linux Installation
+
+#### Step 1: Verify Python Version
 
 ```bash
+python3 --version
+```
+
+Ensure you have Python 3.10-3.13. If not, install from https://www.python.org/downloads/
+
+#### Step 2: Install CAILculator
+
+```bash
+pip3 install cailculator_mcp
+```
+
+#### Step 3: Get Your API Key
+
+Visit the [CAILculator API Portal](https://cailculator-mcp-production.up.railway.app/) to obtain your API key.
+
+#### Step 4: Configure Claude Desktop
+
+Edit the configuration file:
+
+**macOS:**
+```bash
+nano ~/Library/Application\ Support/Claude/claude_desktop_config.json
+```
+
+**Linux:**
+```bash
+nano ~/.config/Claude/claude_desktop_config.json
+```
+
+Add this configuration:
+
+```json
+{
+  "mcpServers": {
+    "cailculator": {
+      "command": "/usr/local/bin/cailculator-mcp",
+      "args": ["--transport", "stdio"],
+      "env": {
+        "CAILCULATOR_API_KEY": "cail_your_api_key_here",
+        "CAILCULATOR_ENABLE_OFFLINE_FALLBACK": "true"
+      }
+    }
+  }
+}
+```
+
+> **Note:** The command path may vary. Find the correct path with:
+> ```bash
+> which cailculator-mcp
+> ```
+
+Save the file (Ctrl+O, Enter, Ctrl+X in nano).
+
+#### Step 5: Restart Claude Desktop
+
+Completely quit and restart Claude Desktop.
+
+#### Step 6: Verify Installation
+
+Look for the 🔌 icon in Claude Desktop and verify "cailculator" appears in the MCP servers list.
+
+### Gemini CLI Installation (HTTP mode)
+
+For Gemini CLI users who want access to the larger context window:
+
+#### Step 1: Install with HTTP transport support
+
+```bash
+pip install cailculator-mcp[http]
+```
+
+#### Step 2: Start the HTTP server
+
+```bash
+export CAILCULATOR_API_KEY="cail_your_api_key_here"
 cailculator-mcp --transport http --port 8080
 ```
 
-Set your API key via environment variable:
-```bash
-export CAILCULATOR_API_KEY="your_api_key_here"
-# Windows: set CAILCULATOR_API_KEY=your_api_key_here
+Windows:
+```powershell
+set CAILCULATOR_API_KEY=cail_your_api_key_here
+cailculator-mcp --transport http --port 8080
 ```
 
-**Note:** The server requires a valid API key. Get yours at https://cailculator-mcp-production.up.railway.app/
-
-#### 2. Configure Gemini CLI:
+#### Step 3: Configure Gemini CLI
 
 Add to `~/.gemini/settings.json`:
 
@@ -156,11 +268,114 @@ Add to `~/.gemini/settings.json`:
 }
 ```
 
-#### 3. HTTP endpoints:
+#### HTTP endpoints:
 
 - **GET /mcp/manifest** - Tool definitions
 - **POST /message** - MCP JSON-RPC messages
 - **GET /health** - Health check
+
+## Troubleshooting
+
+### Windows Issues
+
+**"pip is not recognized as the name of a cmdlet"**
+
+Use the Python launcher instead:
+```powershell
+py -3.13 -m pip install cailculator_mcp
+```
+
+**"Cannot install on Python version 3.14"**
+
+Python 3.14 is not yet supported due to the numba dependency. Install Python 3.13 instead:
+1. Uninstall Python 3.14
+2. Download Python 3.13 (64-bit) from https://www.python.org/downloads/
+3. Reinstall CAILculator
+
+**"Failed to build 'scipy' when getting requirements"**
+
+You likely installed 32-bit Python. CAILculator requires 64-bit Python:
+1. Uninstall current Python
+2. Download "Windows installer (64-bit)" from https://www.python.org/downloads/
+3. Reinstall and verify with: `py -3.13 -c "import platform; print(platform.architecture())"`
+
+Should show: `('64bit', 'WindowsPE')`
+
+**PATH Warnings During Installation**
+
+Warnings like `WARNING: The script cailculator-mcp.exe is installed in '...' which is not on PATH` are safe to ignore. You can still run CAILculator by using the full path in your Claude Desktop configuration.
+
+**"API key validation failed"**
+- Verify your API key is correct in `claude_desktop_config.json`
+- Ensure `CAILCULATOR_ENABLE_OFFLINE_FALLBACK` is set to `"true"`
+- Check that you used double backslashes (`\\`) in Windows paths
+- Restart Claude Desktop completely (quit and reopen, not just refresh)
+- If issues persist, contact support: paul@chavezailabs.com
+
+**CAILculator Not Showing in MCP Servers**
+- Verify the command path in your config file is correct
+- Check for syntax errors in your `claude_desktop_config.json` (use a JSON validator)
+- Ensure you restarted Claude Desktop completely
+- Check Claude Desktop logs for errors
+
+### macOS/Linux Issues
+
+**"command not found: cailculator-mcp"**
+
+The installation path may not be in your PATH. Find it with:
+```bash
+find / -name cailculator-mcp 2>/dev/null
+```
+Use the full path in your Claude Desktop configuration.
+
+**Permission Denied**
+
+If you get permission errors during installation:
+```bash
+pip3 install --user cailculator_mcp
+```
+
+Then update the command path in your config to point to `~/.local/bin/cailculator-mcp`.
+
+---
+
+## API Key Tiers
+
+Visit the [CAILculator API Portal](https://cailculator-mcp-production.up.railway.app) for current pricing and tier details:
+
+- **Individual**: For personal projects and research
+- **Academic**: Special rates for educational institutions
+- **Commercial**: For business applications
+- **Enterprise**: Custom solutions with priority support
+- **Quantitative Finance**: Specialized tier for financial analysis and trading
+
+---
+
+## Quick Start Examples
+
+Once installed and configured, try these examples in Claude Desktop:
+
+**Basic Multiplication:**
+```
+Use CAILculator to multiply two 16D sedenions:
+P = [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+Q = [0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+```
+
+**Zero Divisor Detection:**
+```
+Use CAILculator to test if (e1 + e14) × (e3 + e12) is a zero divisor in 128D using both Cayley-Dickson and Clifford frameworks
+```
+
+**Data Analysis:**
+```
+Use CAILculator to analyze this dataset for patterns: [1.2, 2.3, 3.1, 2.9, 4.2, 5.1, 4.8, 6.2]
+```
+
+**Market Regime Detection:**
+```
+Load Bitcoin price data and use CAILculator to detect market regimes
+```
 
 ## Available Tools
 
@@ -316,36 +531,6 @@ Smart sampling strategy for GB-scale datasets.
 - Regime detection
 - Pattern discovery
 - Anomaly detection
-
-## Usage Examples
-
-### Mathematical Research
-```python
-# Find zero divisors in 32D pathion algebra
-result = compute_high_dimensional(
-    operation="multiply",
-    operands=[
-        [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, ...],  # e_1 + e_10
-        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, ...]   # e_4 - e_15
-    ],
-    dimension=32
-)
-# Check if norm ≈ 0 for zero divisor verification
-```
-
-### Pattern Detection in Data
-```
-"Apply Chavez Transform to this dataset in 32D and detect conjugation patterns"
-"Analyze this high-dimensional embedding for structural instabilities"
-"Find zero divisor resonances in this time series"
-```
-
-### Financial Analysis
-```
-"Load bitcoin_daily.csv and run dual-method regime detection"
-"Calculate RSI and MACD with technical terminology"
-"Batch analyze this 5GB tick data file for anomalies"
-```
 
 ## For AGI Researchers
 
